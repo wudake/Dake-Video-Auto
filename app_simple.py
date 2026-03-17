@@ -32,6 +32,8 @@ def list_bgm():
         for f in bgm_dir.glob("*"):
             if f.suffix.lower() in [".mp3", ".m4a", ".wav"]:
                 bgms.append({"name": f.name, "size_mb": round(f.stat().st_size/1024/1024, 2)})
+        # 按文件名排序
+        bgms.sort(key=lambda x: x["name"])
     return jsonify({"bgms": bgms})
 
 @app.route("/api/download", methods=["POST"])
@@ -88,12 +90,19 @@ def edit_video():
             capture_output=True, text=True, timeout=120, cwd=str(BASE_DIR)
         )
         
+        # 捕获 stderr 作为日志
+        stderr_logs = result.stderr.strip().split('\n') if result.stderr else []
+        
         result_file = BASE_DIR / ".temp_edit_result.json"
         if result_file.exists():
             edit_result = json.loads(result_file.read_text(encoding='utf-8'))
             result_file.unlink()
         else:
-            return jsonify({"success": False, "error": "剪辑器未返回结果"})
+            return jsonify({
+                "success": False, 
+                "error": "剪辑器未返回结果",
+                "logs": stderr_logs
+            })
         
         if edit_result.get("success"):
             output_name = edit_result["output_name"]
@@ -106,9 +115,30 @@ def edit_video():
                 }
             })
         else:
-            return jsonify({"success": False, "error": edit_result.get("error", "剪辑失败")})
+            # 返回详细的错误信息和日志
+            response = {
+                "success": False, 
+                "error": edit_result.get("error", "剪辑失败"),
+                "logs": edit_result.get("logs", stderr_logs)
+            }
+            if "detail" in edit_result:
+                response["detail"] = edit_result["detail"]
+            if "traceback" in edit_result:
+                response["traceback"] = edit_result["traceback"]
+            return jsonify(response)
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "success": False, 
+            "error": "剪辑超时 (超过120秒)",
+            "logs": ["剪辑任务超时，可能是视频太大或处理复杂"]
+        })
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        import traceback
+        return jsonify({
+            "success": False, 
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        })
 
 @app.route("/api/upload/logo", methods=["POST"])
 def upload_logo():
@@ -133,6 +163,73 @@ def upload_bgm():
         file.save(bgm_dir / secure_filename(file.filename))
         return jsonify({"success": True, "message": "BGM 上传成功"})
     return jsonify({"success": False, "error": "仅支持 MP3/M4A/WAV"})
+
+
+@app.route("/api/upload/video", methods=["POST"])
+def upload_video():
+    """本地上传视频文件用于剪辑"""
+    if "file" not in request.files:
+        return jsonify({"success": False, "error": "没有文件"})
+    
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"success": False, "error": "文件名不能为空"})
+    
+    # 检查文件扩展名
+    allowed_extensions = ('.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v')
+    if not file.filename.lower().endswith(allowed_extensions):
+        return jsonify({"success": False, "error": f"仅支持视频格式: {', '.join(allowed_extensions)}"})
+    
+    # 保存上传的视频
+    raw_dir = BASE_DIR / "videos" / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 生成安全的文件名，保留原始扩展名
+    import uuid
+    ext = Path(file.filename).suffix
+    video_id = f"upload_{uuid.uuid4().hex[:12]}"
+    filename = f"{video_id}{ext}"
+    
+    save_path = raw_dir / filename
+    file.save(save_path)
+    
+    # 获取文件大小
+    file_size = save_path.stat().st_size / 1024 / 1024
+    
+    print(f"📤 视频上传成功: {filename} ({file_size:.2f}MB)")
+    
+    return jsonify({
+        "success": True,
+        "data": {
+            "note_id": video_id,
+            "filename": filename,
+            "size_mb": round(file_size, 2),
+            "message": f"上传成功！{round(file_size, 2)}MB"
+        }
+    })
+
+@app.route("/api/logs/edit/latest")
+def get_latest_edit_logs():
+    """获取最新的剪辑日志"""
+    logs_dir = BASE_DIR / "logs"
+    if not logs_dir.exists():
+        return jsonify({"logs": [], "error": "日志目录不存在"})
+    
+    # 找到最新的剪辑日志
+    log_files = sorted(logs_dir.glob("edit_*.log"), key=lambda x: x.stat().st_mtime, reverse=True)
+    
+    if not log_files:
+        return jsonify({"logs": []})
+    
+    try:
+        # 读取最新的日志文件
+        latest_log = log_files[0]
+        content = latest_log.read_text(encoding='utf-8')
+        lines = [l for l in content.split('\n') if l.strip()]
+        return jsonify({"logs": lines[-100:]})  # 返回最后100行
+    except Exception as e:
+        return jsonify({"logs": [], "error": str(e)})
+
 
 @app.route("/api/download/edited/<filename>")
 def download_edited(filename):

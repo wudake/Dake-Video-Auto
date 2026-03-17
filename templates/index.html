@@ -602,6 +602,53 @@
             font-size: 0.95em;
         }
 
+        /* 日志显示区域 */
+        .log-container {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-line {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .log-line:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #64748b;
+            margin-right: 8px;
+        }
+
+        .log-info { color: #38bdf8; }
+        .log-error { color: #ef4444; }
+        .log-warn { color: #f59e0b; }
+        .log-debug { color: #94a3b8; }
+
+        .log-toggle {
+            margin-top: 10px;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .log-toggle:hover {
+            text-decoration: underline;
+        }
+
         /* 响应式 */
         @media (max-width: 600px) {
             .container { padding: 20px 16px; }
@@ -621,23 +668,50 @@
                 <div class="logo-icon">DK</div>
             </div>
             <h1>Dake视频自动化工具</h1>
-            <p>小红书视频下载 · 智能剪辑 · 一键导出</p>
+            <p>小红书/抖音视频下载 · 智能剪辑 · 一键导出</p>
         </div>
 
-        <!-- 步骤 1: 下载 -->
+        <!-- 步骤 1: 获取视频 -->
         <div class="card" id="step1">
             <div class="card-title">
                 <span class="step-number">1</span>
-                下载小红书视频
+                获取视频
             </div>
-            <div class="input-group">
-                <label>小红书视频链接</label>
-                <input type="text" id="xhs-url" placeholder="https://www.xiaohongshu.com/explore/...">
+            
+            <!-- 选项卡 -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button class="btn btn-secondary btn-sm" id="tab-download" onclick="switchTab('download')" style="flex: 1;">📥 链接下载</button>
+                <button class="btn btn-secondary btn-sm" id="tab-upload" onclick="switchTab('upload')" style="flex: 1;">📤 本地上传</button>
             </div>
+            
+            <!-- 链接下载面板 -->
+            <div id="panel-download">
+                <div class="input-group">
+                    <label>视频链接（支持小红书）</label>
+                    <input type="text" id="xhs-url" placeholder="https://www.xiaohongshu.com/explore/...">
+                </div>
 
-            <button class="btn btn-primary" id="btn-download" onclick="downloadVideo()">
-                <span>开始下载</span>
-            </button>
+                <button class="btn btn-primary" id="btn-download" onclick="downloadVideo()">
+                    <span>开始下载</span>
+                </button>
+            </div>
+            
+            <!-- 本地上传面板 -->
+            <div id="panel-upload" class="hidden">
+                <div class="input-group">
+                    <label>上传本地视频</label>
+                    <div class="upload-area" onclick="document.getElementById('video-file').click()">
+                        <p>🎬 点击或拖拽上传视频</p>
+                        <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 8px;">支持 MP4, MOV, AVI, MKV, WEBM, M4V</p>
+                        <input type="file" id="video-file" accept=".mp4,.mov,.avi,.mkv,.webm,.m4v" style="display:none" onchange="uploadVideo(this)">
+                    </div>
+                </div>
+                <div id="uploaded-video-info" class="hidden" style="padding: 15px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; margin-bottom: 15px;">
+                    <p style="color: var(--success); margin: 0;">✅ <span id="uploaded-filename"></span></p>
+                    <p style="color: var(--text-muted); font-size: 0.85em; margin: 5px 0 0 0;">大小: <span id="uploaded-size"></span></p>
+                </div>
+            </div>
+            
             <div class="status" id="download-status"></div>
         </div>
 
@@ -816,7 +890,7 @@
                 
                 <div class="input-group">
                     <label>字体大小</label>
-                    <input type="number" id="subtitle-font-size" class="select-box" value="24" min="10" max="72" style="width: 100%;">
+                    <input type="number" id="subtitle-font-size" class="select-box" value="12" min="10" max="72" style="width: 100%;">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1015,7 +1089,7 @@
         // 字幕效果实时预览
         function updateSubtitlePreview() {
             const style = document.getElementById('subtitle-style').value;
-            const size = document.getElementById('subtitle-font-size').value || 24;
+            const size = document.getElementById('subtitle-font-size').value || 12;
             const preview = document.getElementById('subtitle-preview');
             
             const colorMap = {
@@ -1033,6 +1107,116 @@
         
         document.getElementById('subtitle-style').addEventListener('change', updateSubtitlePreview);
         document.getElementById('subtitle-font-size').addEventListener('input', updateSubtitlePreview);
+
+        // 选项卡切换
+        function switchTab(tab) {
+            const tabDownload = document.getElementById('tab-download');
+            const tabUpload = document.getElementById('tab-upload');
+            const panelDownload = document.getElementById('panel-download');
+            const panelUpload = document.getElementById('panel-upload');
+            
+            if (tab === 'download') {
+                tabDownload.classList.remove('btn-secondary');
+                tabDownload.classList.add('btn-primary');
+                tabUpload.classList.remove('btn-primary');
+                tabUpload.classList.add('btn-secondary');
+                panelDownload.classList.remove('hidden');
+                panelUpload.classList.add('hidden');
+            } else {
+                tabUpload.classList.remove('btn-secondary');
+                tabUpload.classList.add('btn-primary');
+                tabDownload.classList.remove('btn-primary');
+                tabDownload.classList.add('btn-secondary');
+                panelUpload.classList.remove('hidden');
+                panelDownload.classList.add('hidden');
+            }
+        }
+        
+        // 默认选中下载选项卡
+        switchTab('download');
+        
+        // 上传视频
+        async function uploadVideo(input) {
+            if (!input.files.length) return;
+            
+            const file = input.files[0];
+            const statusEl = document.getElementById('download-status');
+            
+            // 显示上传状态
+            statusEl.className = 'status show';
+            statusEl.style.color = 'var(--text)';
+            statusEl.innerHTML = '<div class="spinner" style="display: inline-block; margin-right: 10px;"></div>正在上传...';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/api/upload/video', { method: 'POST', body: formData });
+                const result = await res.json();
+                
+                if (result.success) {
+                    currentNoteId = result.data.note_id;
+                    
+                    // 显示上传成功信息
+                    document.getElementById('uploaded-filename').textContent = result.data.filename;
+                    document.getElementById('uploaded-size').textContent = result.data.size_mb + ' MB';
+                    document.getElementById('uploaded-video-info').classList.remove('hidden');
+                    
+                    showStatus('download-status', result.data.message);
+                    
+                    // 加载资源并跳转到剪辑配置
+                    await loadLogos();
+                    await loadBgms();
+                    document.getElementById('step2').classList.remove('hidden');
+                    document.getElementById('step2').classList.add('fade-in');
+                    document.getElementById('step2').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    showStatus('download-status', '❌ ' + result.error, true);
+                }
+            } catch (e) {
+                showStatus('download-status', '❌ 上传失败: ' + e.message, true);
+            }
+        }
+
+        // 格式化日志显示
+        function formatLogLine(line) {
+            // 匹配时间戳 [YYYY-MM-DD HH:MM:SS]
+            const timeMatch = line.match(/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/);
+            const time = timeMatch ? timeMatch[1] : '';
+            const content = timeMatch ? line.substring(timeMatch[0].length).trim() : line;
+            
+            // 判断日志级别
+            let levelClass = 'log-debug';
+            if (content.includes('[ERROR]') || content.includes('❌')) {
+                levelClass = 'log-error';
+            } else if (content.includes('[INFO]') || content.includes('✅') || content.includes('🎬') || content.includes('📁')) {
+                levelClass = 'log-info';
+            } else if (content.includes('[WARNING]') || content.includes('⚠️')) {
+                levelClass = 'log-warn';
+            }
+            
+            return `<div class="log-line"><span class="log-time">${time}</span><span class="${levelClass}">${escapeHtml(content)}</span></div>`;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showLogs(logs, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="log-line"><span class="log-debug">暂无日志</span></div>';
+                return;
+            }
+            
+            container.innerHTML = logs.map(formatLogLine).join('');
+            // 滚动到底部
+            container.scrollTop = container.scrollHeight;
+        }
 
         async function editVideo() {
             if (!currentNoteId) {
@@ -1068,7 +1252,7 @@
                     subtitle_start: parseFloat(document.getElementById('subtitle-start').value) || 0,
                     subtitle_end: subtitleEnd ? parseFloat(subtitleEnd) : null,
                     subtitle_style: document.getElementById('subtitle-style').value,
-                    subtitle_font_size: parseInt(document.getElementById('subtitle-font-size').value) || 24,
+                    subtitle_font_size: parseInt(document.getElementById('subtitle-font-size').value) || 12,
                     subtitle_position: document.getElementById('subtitle-position').value,
                     subtitle_align: document.getElementById('subtitle-align').value,
                     subtitle_outline_width: parseInt(document.getElementById('subtitle-outline').value) || 2
@@ -1076,6 +1260,10 @@
             }
 
             setLoading('btn-edit', true);
+            
+            // 清空之前的日志显示
+            const statusEl = document.getElementById('edit-status');
+            statusEl.innerHTML = '';
 
             const config = {
                 crop_top: cropHeadTime,
@@ -1114,12 +1302,46 @@
                     window.currentVideoName = result.data.output_name;
                     document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
                 } else {
-                    showStatus('edit-status', '❌ ' + result.error, true);
+                    // 构建详细的错误显示
+                    let errorHtml = `<div style="color: var(--error); margin-bottom: 10px;">❌ ${escapeHtml(result.error)}</div>`;
+                    
+                    if (result.detail) {
+                        errorHtml += `<div style="color: var(--text-muted); margin-bottom: 10px; font-size: 0.9em;">${escapeHtml(result.detail)}</div>`;
+                    }
+                    
+                    // 添加日志显示区域
+                    errorHtml += '<div style="margin-top: 15px;">';
+                    errorHtml += '<div class="log-toggle" onclick="toggleLogs()">📋 查看详细日志 ▼</div>';
+                    errorHtml += '<div id="error-logs" class="log-container" style="display: none;">';
+                    errorHtml += '</div></div>';
+                    
+                    statusEl.className = 'status show error';
+                    statusEl.innerHTML = errorHtml;
+                    
+                    // 显示日志
+                    showLogs(result.logs || [], 'error-logs');
+                    
+                    // 如果 traceback 存在，也显示
+                    if (result.traceback) {
+                        console.error('剪辑错误详情:', result.traceback);
+                    }
                 }
             } catch (e) {
-                showStatus('edit-status', '❌ 网络错误', true);
+                showStatus('edit-status', '❌ 网络错误: ' + e.message, true);
             } finally {
                 setLoading('btn-edit', false);
+            }
+        }
+        
+        function toggleLogs() {
+            const logsContainer = document.getElementById('error-logs');
+            const toggle = document.querySelector('.log-toggle');
+            if (logsContainer.style.display === 'none') {
+                logsContainer.style.display = 'block';
+                toggle.innerHTML = '📋 隐藏详细日志 ▲';
+            } else {
+                logsContainer.style.display = 'none';
+                toggle.innerHTML = '📋 查看详细日志 ▼';
             }
         }
     </script>

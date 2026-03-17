@@ -156,15 +156,15 @@ class AdvancedVideoEditor:
         ms = int((seconds - int(seconds)) * 1000)
         return f"{hrs:02d}:{mins:02d}:{secs:02d},{ms:03d}"
     
-    def calculate_font_size(self, text, video_width=1080, max_font_size=24, min_font_size=16, fixed_size=None):
+    def calculate_font_size(self, text, video_width=1080, max_font_size=12, min_font_size=10, fixed_size=None):
         """
         根据字幕长度计算自适应字体大小
         
         Args:
             text: 字幕文本
             video_width: 视频宽度
-            max_font_size: 最大字体大小 (默认24)
-            min_font_size: 最小字体大小 (默认16)
+            max_font_size: 最大字体大小 (默认12)
+            min_font_size: 最小字体大小 (默认10)
             fixed_size: 固定字体大小 (如果指定则使用固定值)
             
         Returns:
@@ -237,7 +237,7 @@ class AdvancedVideoEditor:
                 avg_length = sum(len(t[1].strip()) for t in texts) / len(texts)
                 font_size = self.calculate_font_size("x" * int(avg_length))
             else:
-                font_size = 36
+                font_size = 12
             print(f"   字体大小: 自适应 {font_size}px")
         
         # 位置和对齐
@@ -411,7 +411,7 @@ class AdvancedVideoEditor:
         subtitle_start = config.get("subtitle_start", 0)
         subtitle_end = config.get("subtitle_end", None)  # None表示到视频结尾
         subtitle_style_preset = config.get("subtitle_style", "yellow_black")
-        subtitle_font_size = config.get("subtitle_font_size", 24)
+        subtitle_font_size = config.get("subtitle_font_size", 12)
         subtitle_position = config.get("subtitle_position", "bottom")
         subtitle_align = config.get("subtitle_align", "center")  # left/center/right
         subtitle_outline_width = config.get("subtitle_outline_width", 2)
@@ -487,7 +487,7 @@ class AdvancedVideoEditor:
                 "bottom_right": (f"W-w-{m}", f"H-h-{m}"),
                 "bottom_left": (str(m), f"H-h-{m}"),
                 "top_right": (f"W-w-{m}", str(m)),
-                "top_left": (str(m), str(m)),
+                "top_left": (str(m+54), str(m+74)),
                 "bottom_center": ("(W-w)/2", f"H-h-{m}")
             }
             x, y = pos_map.get(pos, pos_map["bottom_right"])

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-下载工作进程 - 支持单用户和多用户模式
+下载工作进程 - 支持单用户和多用户模式，目前仅支持小红书
 """
 import asyncio
 import json
@@ -10,6 +10,17 @@ from pathlib import Path
 # 添加路径
 sys.path.insert(0, "core")
 from downloader_pw import XHSPlaywrightDownloader
+
+
+def detect_platform(url):
+    """检测URL所属平台"""
+    url_lower = url.lower()
+    if any(domain in url_lower for domain in ['xiaohongshu.com', 'xhslink.com', 'xhscdn.com']):
+        return 'xiaohongshu'
+    elif any(domain in url_lower for domain in ['douyin.com', 'iesdouyin.com', 'v.douyin.com']):
+        return 'douyin'
+    return None
+
 
 def main():
     base_dir = Path(__file__).parent
@@ -39,21 +50,36 @@ def main():
     
     url = url_file.read_text(encoding='utf-8').strip()
     
+    # 检测平台
+    platform = detect_platform(url)
+    
     # 下载
     async def do_download():
-        dl = XHSPlaywrightDownloader(raw_dir=str(raw_dir), headless=True)
-        return await dl.download(url)
+        if platform == 'xiaohongshu':
+            print(f"📱 识别平台: 小红书")
+            dl = XHSPlaywrightDownloader(raw_dir=str(raw_dir), headless=True)
+            return await dl.download(url)
+        elif platform == 'douyin':
+            print(f"📱 识别平台: 抖音（暂不支持）")
+            return {
+                "status": "error", 
+                "error": "抖音视频下载功能暂时关闭，请使用小红书链接"
+            }
+        else:
+            return {"status": "error", "error": f"不支持的平台: {url}"}
     
     try:
         result = asyncio.run(do_download())
     except Exception as e:
-        result = {"status": "error", "error": str(e)}
+        import traceback
+        result = {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
     
     # 保存结果
     result_file.write_text(
         json.dumps(result, ensure_ascii=False), 
         encoding='utf-8'
     )
+
 
 if __name__ == "__main__":
     main()
