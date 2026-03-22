@@ -44,6 +44,20 @@ Dake-Video-Auto 是一款面向内容创作者的视频自动化处理工具，�
 - **原因**: 抖音反爬升级，需要 Cookie 登录，配置复杂
 - **备注**: 代码保留，未来可通过配置 Cookie 重新启用
 
+#### 2.1.4 视频传输到手机 ⭐ 新增 (v3.1)
+- **功能**: 视频剪辑完成后自动生成二维码，手机扫码下载
+- **技术实现**: 
+  - 后端生成下载二维码 (`core/video_transfer.py`)
+  - 使用 `qrcode` 库生成二维码图片
+  - 自动获取局域网 IP 地址构建下载链接
+- **下载链接格式**: `http://{局域网IP}:5000/api/download/edited/{视频名}`
+- **存储位置**: `static/qr_{视频名}.png`
+- **使用方式**: 
+  1. 剪辑完成后页面自动显示二维码
+  2. iPhone 相机扫码
+  3. 点击链接直接下载视频
+- **状态**: ✅ 已上线
+
 ---
 
 ### 2.2 视频剪辑模块
@@ -169,10 +183,11 @@ Dake-Video-Auto/
 │   ├── downloader_pw.py       # 小红书下载器
 │   ├── douyin_downloader.py   # 抖音下载器 (暂停)
 │   ├── douyin_ytdlp.py        # yt-dlp 抖音下载 (暂停)
-│   └── publish_assistant.py   # 发布助手
+│   ├── publish_assistant.py   # 发布助手
+│   └── video_transfer.py      # 视频传输模块 (二维码生成) ⭐ 新增
 ├── templates/
 │   └── index.html             # 主界面
-├── static/                    # 静态资源
+├── static/                    # 静态资源 (含二维码)
 ├── videos/
 │   └── raw/                   # 原始视频
 ├── output/                    # 成品视频
@@ -238,6 +253,22 @@ GET  /api/bgm/list            # 获取 BGM 列表（已排序）
 POST /api/upload/logo         # 上传 Logo
 POST /api/upload/bgm          # 上传 BGM
 GET  /api/logs/edit/latest    # 获取最新剪辑日志
+GET  /static/qr_{视频名}.png   # 获取下载二维码 ⭐ 新增
+```
+
+#### 二维码传输响应
+剪辑接口 (`POST /api/edit`) 成功响应新增字段：
+```json
+{
+  "success": true,
+  "data": {
+    "output_name": "video_xxx.mp4",
+    "preview_url": "/api/preview/video_xxx.mp4",
+    "download_url": "/api/download/edited/video_xxx.mp4",
+    "qr_url": "/static/qr_video_xxx.mp4.png",
+    "qr_tip": "iPhone 扫码直接下载"
+  }
+}
 ```
 
 ---
@@ -326,7 +357,14 @@ http://服务器IP:5000
 
 ## 7. 版本历史
 
-### v3.0 (当前版本 - 2026-03-17)
+### v3.1 (2026-03-22) ⭐ 最新
+- ✅ 新增视频传输功能：自动生成下载二维码
+- ✅ iPhone 扫码直接下载剪辑后的视频
+- ✅ 新增 `core/video_transfer.py` 传输模块
+- ✅ 前端页面显示二维码区域
+- ✅ 自动获取局域网 IP 构建下载链接
+
+### v3.0 (2026-03-17)
 - ✅ 新增本地上传视频功能
 - ✅ BGM 列表按文件名排序
 - ✅ Logo 左上角位置调整 (84px, 104px)
@@ -360,8 +398,8 @@ http://服务器IP:5000
 **项目路径**: `/home/dake/Dake-Video-Auto/`
 **维护者**: Dake & Zhushou
 **创建时间**: 2026-03-10
-**最后更新**: 2026-03-17
-**版本**: v3.0
+**最后更新**: 2026-03-22
+**版本**: v3.1
 
 ---
 

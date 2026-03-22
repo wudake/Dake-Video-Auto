@@ -106,14 +106,27 @@ def edit_video():
         
         if edit_result.get("success"):
             output_name = edit_result["output_name"]
-            return jsonify({
-                "success": True,
-                "data": {
-                    "output_name": output_name,
-                    "preview_url": f"/api/preview/{output_name}",
-                    "download_url": f"/api/download/edited/{output_name}"
-                }
-            })
+            
+            # 生成二维码便于手机下载
+            try:
+                sys.path.insert(0, str(BASE_DIR / "core"))
+                from video_transfer import generate_video_qr
+                qr_result = generate_video_qr(output_name, port=5000, output_dir=str(BASE_DIR / "static"))
+                qr_url = f"/static/{qr_result['qr_filename']}"
+            except Exception as e:
+                qr_url = None
+                print(f"二维码生成失败: {e}")
+            
+            response_data = {
+                "output_name": output_name,
+                "preview_url": f"/api/preview/{output_name}",
+                "download_url": f"/api/download/edited/{output_name}"
+            }
+            if qr_url:
+                response_data["qr_url"] = qr_url
+                response_data["qr_tip"] = "iPhone 扫码直接下载"
+            
+            return jsonify({"success": True, "data": response_data})
         else:
             # 返回详细的错误信息和日志
             response = {

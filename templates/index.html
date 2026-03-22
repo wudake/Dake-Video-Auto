@@ -944,6 +944,14 @@
             </div>
             <p style="color: var(--success); font-size: 1.2em;">🎉 视频剪辑成功！</p>
             <video class="preview-video" id="preview-player" controls></video>
+            
+            <!-- 二维码传输区域 -->
+            <div id="qr-section" class="qr-container" style="margin: 20px 0; padding: 20px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); display: none;">
+                <p style="margin-bottom: 15px; color: var(--text-muted);">📱 iPhone 扫码直接下载到手机</p>
+                <img id="qr-image" src="" alt="下载二维码" style="max-width: 200px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <p id="qr-tip" style="margin-top: 10px; font-size: 0.9em; color: var(--accent);"></p>
+            </div>
+            
             <div class="action-buttons">
                 <a id="download-link" class="btn btn-primary" download>⬇️ 下载视频</a>
                 <button class="btn btn-secondary" onclick="location.reload()">🔄 处理下一个</button>
@@ -1300,6 +1308,18 @@
                     document.getElementById('preview-player').src = result.data.preview_url;
                     document.getElementById('download-link').href = result.data.download_url;
                     window.currentVideoName = result.data.output_name;
+                    
+                    // 显示二维码
+                    if (result.data.qr_url) {
+                        const qrSection = document.getElementById('qr-section');
+                        const qrImage = document.getElementById('qr-image');
+                        const qrTip = document.getElementById('qr-tip');
+                        
+                        qrImage.src = result.data.qr_url;
+                        qrTip.textContent = result.data.qr_tip || 'iPhone 扫码直接下载';
+                        qrSection.style.display = 'block';
+                    }
+                    
                     document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
                 } else {
                     // 构建详细的错误显示
