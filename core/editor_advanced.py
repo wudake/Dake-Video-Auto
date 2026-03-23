@@ -402,8 +402,12 @@ class AdvancedVideoEditor:
             if bgms:
                 bgm_path = Path(bgms[0]["path"])
         
-        use_bgm = config.get("replace_audio", False) and bgm_path and bgm_path.exists()
-        original_volume = config.get("original_volume", 1.0 if not use_bgm else 0.0)
+        # 判断是否使用 BGM（只要有选择 BGM 文件就使用）
+        use_bgm = bgm_path and bgm_path.exists()
+        # 判断是否替换原声（勾选则替换，未勾选则混合）
+        replace_audio = config.get("replace_audio", False)
+        original_volume = config.get("original_volume", 0.0 if replace_audio else 1.0)
+        bgm_volume = config.get("bgm_volume", 0.8)
         
         # 字幕配置
         add_subtitles = config.get("add_subtitles", False)
@@ -503,9 +507,23 @@ class AdvancedVideoEditor:
         # 音频处理
         if use_bgm:
             bgm_vol = config.get("bgm_volume", 0.8)
+            # 处理 BGM：裁剪时长、调整音量
             filter_chains.append(f"[{bgm_idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={bgm_vol}[bgm]")
-            audio_out = "[bgm]"
+            
+            if replace_audio:
+                # 替换模式：只用 BGM
+                audio_out = "[bgm]"
+            else:
+                # 混合模式：原声 + BGM
+                if speed != 1.0 and speed <= 2.0:
+                    filter_chains.append(f"[0:a]atempo={speed},volume={original_volume}[a]")
+                else:
+                    filter_chains.append(f"[0:a]volume={original_volume}[a]")
+                # 混合音频
+                filter_chains.append(f"[a][bgm]amix=inputs=2:duration=first:dropout_transition=3[mix]")
+                audio_out = "[mix]"
         else:
+            # 没有 BGM，只用原声
             if speed != 1.0 and speed <= 2.0:
                 filter_chains.append(f"[0:a]atempo={speed},volume={original_volume}[a]")
             else:

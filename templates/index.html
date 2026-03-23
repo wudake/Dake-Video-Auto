@@ -749,9 +749,18 @@
 
             <div class="input-group">
                 <label>选择 BGM</label>
-                <select id="bgm-select" class="select-box">
-                    <option value="">-- 请选择 --</option>
-                </select>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="bgm-select" class="select-box" style="flex: 1;" onchange="updateBgmPreview()">
+                        <option value="">-- 请选择 --</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" id="btn-preview-bgm" onclick="previewBgm()" disabled>
+                        ▶️ 试听
+                    </button>
+                </div>
+                <!-- 音频播放器 -->
+                <div id="bgm-player-container" style="margin-top: 12px; display: none;">
+                    <audio id="bgm-audio-player" controls style="width: 100%; height: 36px;"></audio>
+                </div>
             </div>
 
             <!-- 音频设置 -->
@@ -890,7 +899,7 @@
                 
                 <div class="input-group">
                     <label>字体大小</label>
-                    <input type="number" id="subtitle-font-size" class="select-box" value="12" min="10" max="72" style="width: 100%;">
+                    <input type="number" id="subtitle-font-size" class="select-box" value="10" min="10" max="72" style="width: 100%;">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1018,6 +1027,38 @@
             }
         }
 
+        // 更新 BGM 预览按钮状态
+        function updateBgmPreview() {
+            const select = document.getElementById('bgm-select');
+            const btn = document.getElementById('btn-preview-bgm');
+            btn.disabled = !select.value;
+            
+            // 如果切换了 BGM，停止当前播放
+            const player = document.getElementById('bgm-audio-player');
+            const container = document.getElementById('bgm-player-container');
+            if (player) {
+                player.pause();
+                player.src = '';
+                container.style.display = 'none';
+            }
+        }
+
+        // BGM 试听功能
+        function previewBgm() {
+            const select = document.getElementById('bgm-select');
+            const filename = select.value;
+            if (!filename) return;
+            
+            const player = document.getElementById('bgm-audio-player');
+            const container = document.getElementById('bgm-player-container');
+            
+            player.src = '/api/bgm/preview/' + encodeURIComponent(filename);
+            container.style.display = 'block';
+            player.play().catch(e => {
+                console.log('自动播放被阻止，请手动点击播放');
+            });
+        }
+
         async function downloadVideo() {
             const url = document.getElementById('xhs-url').value.trim();
             if (!url) {
@@ -1097,7 +1138,7 @@
         // 字幕效果实时预览
         function updateSubtitlePreview() {
             const style = document.getElementById('subtitle-style').value;
-            const size = document.getElementById('subtitle-font-size').value || 12;
+            const size = document.getElementById('subtitle-font-size').value || 10;
             const preview = document.getElementById('subtitle-preview');
             
             const colorMap = {
@@ -1260,7 +1301,7 @@
                     subtitle_start: parseFloat(document.getElementById('subtitle-start').value) || 0,
                     subtitle_end: subtitleEnd ? parseFloat(subtitleEnd) : null,
                     subtitle_style: document.getElementById('subtitle-style').value,
-                    subtitle_font_size: parseInt(document.getElementById('subtitle-font-size').value) || 12,
+                    subtitle_font_size: parseInt(document.getElementById('subtitle-font-size').value) || 10,
                     subtitle_position: document.getElementById('subtitle-position').value,
                     subtitle_align: document.getElementById('subtitle-align').value,
                     subtitle_outline_width: parseInt(document.getElementById('subtitle-outline').value) || 2

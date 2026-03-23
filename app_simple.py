@@ -178,7 +178,17 @@ def upload_bgm():
     return jsonify({"success": False, "error": "仅支持 MP3/M4A/WAV"})
 
 
-@app.route("/api/upload/video", methods=["POST"])
+@app.route("/api/bgm/preview/<filename>")
+def preview_bgm(filename):
+    """BGM 试听 - 支持 range 请求"""
+    from werkzeug.utils import secure_filename
+    safe_filename = secure_filename(filename)
+    bgm_path = BASE_DIR / "assets" / "bgm" / safe_filename
+    
+    if not bgm_path.exists():
+        return jsonify({"error": "文件不存在"}), 404
+    
+    return send_from_directory(BASE_DIR / "assets" / "bgm", safe_filename)
 def upload_video():
     """本地上传视频文件用于剪辑"""
     if "file" not in request.files:
