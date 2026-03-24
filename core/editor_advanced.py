@@ -395,19 +395,32 @@ class AdvancedVideoEditor:
         logo_path = self.logos_dir / logo_name if logo_name else None
         use_logo = config.get("add_logo", False) and logo_path and logo_path.exists()
         
+        # BGM 选择
         bgm_name = config.get("bgm_select", "")
         bgm_path = self.bgm_dir / bgm_name if bgm_name else None
-        if not bgm_path or not bgm_path.exists():
+        if bgm_path and not bgm_path.exists():
             bgms = self.list_bgms()
             if bgms:
                 bgm_path = Path(bgms[0]["path"])
-        
-        # 判断是否使用 BGM（只要有选择 BGM 文件就使用）
         use_bgm = bgm_path and bgm_path.exists()
-        # 判断是否替换原声（勾选则替换，未勾选则混合）
+        
+        # TTS 音频选择
+        use_tts = config.get("use_tts", False)
+        tts_path = config.get("tts_audio_path", "")
+        if use_tts and tts_path:
+            tts_path = Path(tts_path)
+            if not tts_path.exists():
+                use_tts = False
+                tts_path = None
+        else:
+            use_tts = False
+            tts_path = None
+        
+        # 判断是否替换原声
         replace_audio = config.get("replace_audio", False)
         original_volume = config.get("original_volume", 0.0 if replace_audio else 1.0)
         bgm_volume = config.get("bgm_volume", 0.8)
+        tts_volume = config.get("tts_volume", 1.0)
         
         # 字幕配置
         add_subtitles = config.get("add_subtitles", False)
@@ -504,30 +517,58 @@ class AdvancedVideoEditor:
             filter_chains.append(f"[0:v]{base_vf}[v]")
             video_out = "[v]"
         
-        # 音频处理
-        if use_bgm:
-            bgm_vol = config.get("bgm_volume", 0.8)
-            # 处理 BGM：裁剪时长、调整音量
-            filter_chains.append(f"[{bgm_idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={bgm_vol}[bgm]")
-            
-            if replace_audio:
-                # 替换模式：只用 BGM
-                audio_out = "[bgm]"
+        # 音频处理 - 支持原声、TTS、BGM三路混音
+        audio_inputs = []  # 音频输入列表 [(输入索引, 音量, 类型), ...]
+        
+        # 1. 原声
+        if original_volume > 0 and not replace_audio:
+            audio_inputs.append((0, original_volume, "原声"))
+        
+        # 2. TTS音频
+        if use_tts and tts_path:
+            inputs.extend(["-i", str(tts_path)])
+            tts_idx = input_idx
+            input_idx += 1
+            audio_inputs.append((tts_idx, tts_volume, "TTS配音"))
+            print(f"   TTS: {tts_path.name}")
+        
+        # 3. BGM
+        if use_bgm and bgm_path:
+            inputs.extend(["-i", str(bgm_path)])
+            bgm_idx = input_idx
+            input_idx += 1
+            audio_inputs.append((bgm_idx, bgm_volume, "BGM"))
+            print(f"   BGM: {bgm_path.name}")
+        
+        # 构建音频滤镜链
+        if len(audio_inputs) == 0:
+            # 没有音频源，只用原声（静音）
+            filter_chains.append(f"[0:a]volume=0[a]")
+            audio_out = "[a]"
+        elif len(audio_inputs) == 1:
+            # 只有一个音频源
+            idx, vol, name = audio_inputs[0]
+            if idx == 0 and speed != 1.0 and speed <= 2.0:
+                filter_chains.append(f"[0:a]atempo={speed},volume={vol}[a]")
             else:
-                # 混合模式：原声 + BGM
-                if speed != 1.0 and speed <= 2.0:
-                    filter_chains.append(f"[0:a]atempo={speed},volume={original_volume}[a]")
-                else:
-                    filter_chains.append(f"[0:a]volume={original_volume}[a]")
-                # 混合音频
-                filter_chains.append(f"[a][bgm]amix=inputs=2:duration=first:dropout_transition=3[mix]")
-                audio_out = "[mix]"
+                filter_chains.append(f"[{idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}[a]")
+            audio_out = "[a]"
         else:
-            # 没有 BGM，只用原声
-            if speed != 1.0 and speed <= 2.0:
-                filter_chains.append(f"[0:a]atempo={speed},volume={original_volume}[a]")
-            else:
-                filter_chains.append(f"[0:a]volume={original_volume}[a]")
+            # 多路音频混音
+            audio_labels = []
+            for idx, vol, name in audio_inputs:
+                label = f"[a{idx}]"
+                audio_labels.append(label)
+                if idx == 0 and speed != 1.0 and speed <= 2.0:
+                    # 原声需要变速
+                    filter_chains.append(f"[0:a]atempo={speed},volume={vol}{label}")
+                else:
+                    # 其他音频裁剪并调整音量
+                    filter_chains.append(f"[{idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}{label}")
+            
+            # 混音
+            num_inputs = len(audio_inputs)
+            filter_chains.append(f"{''.join(audio_labels)}amix=inputs={num_inputs}:duration=first:dropout_transition=3[a]")
             audio_out = "[a]"
         
         filter_complex = ";".join(filter_chains)

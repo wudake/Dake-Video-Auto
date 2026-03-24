@@ -791,6 +791,101 @@
                        oninput="document.getElementById('bgm-vol-value').textContent=Math.round(this.value*100)+'%'">
             </div>
 
+            <!-- 脚本配音 -->
+            <div class="section-title">🎙️ 脚本配音 (TTS)</div>
+            
+            <div class="options-grid">
+                <label class="option-item">
+                    <input type="checkbox" id="opt-tts" onchange="toggleTTSPanel()">
+                    <span>启用AI配音</span>
+                </label>
+            </div>
+            
+            <div id="tts-config-panel" style="display: none; padding: 20px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; margin-bottom: 20px;">
+                <div class="input-group">
+                    <label>📝 输入文案</label>
+                    <textarea id="tts-text" rows="3" placeholder="输入要转换为语音的文案..." 
+                        style="width: 100%; padding: 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 10px; color: var(--text); resize: vertical; font-size: 15px;"></textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="input-group">
+                        <label>🎙️ 选择音色</label>
+                        <select id="tts-voice" class="select-box">
+                            <optgroup label="🇨🇳 中文女声">
+                                <option value="zh-CN-XiaoxiaoNeural">晓晓 - 活泼自然</option>
+                                <option value="zh-CN-XiaoyiNeural">晓伊 - 温柔甜美</option>
+                                <option value="zh-CN-liaoning-XiaobeiNeural">晓北 - 东北口音</option>
+                            </optgroup>
+                            <optgroup label="🇨🇳 中文男声">
+                                <option value="zh-CN-YunxiNeural">云希 - 年轻活力</option>
+                                <option value="zh-CN-YunyangNeural">云扬 - 成熟稳重</option>
+                                <option value="zh-CN-YunjianNeural">云健 - 新闻播报</option>
+                            </optgroup>
+                            <optgroup label="🇺🇸 美式英语女声">
+                                <option value="en-US-AriaNeural">Aria - Professional</option>
+                                <option value="en-US-AnaNeural">Ana - Young & Cheerful</option>
+                                <option value="en-US-JennyNeural">Jenny - Clear & Friendly</option>
+                                <option value="en-US-MichelleNeural">Michelle - Warm & Pleasant</option>
+                                <option value="en-US-AmberNeural">Amber - Lively & Fun</option>
+                                <option value="en-US-AshleyNeural">Ashley - Casual & Natural</option>
+                                <option value="en-US-CoraNeural">Cora - Gentle & Caring</option>
+                                <option value="en-US-ElizabethNeural">Elizabeth - Mature & Wise</option>
+                                <option value="en-US-MonicaNeural">Monica - Professional & Calm</option>
+                                <option value="en-US-SaraNeural">Sara - Fresh & Natural</option>
+                            </optgroup>
+                            <optgroup label="🇺🇸 美式英语男声">
+                                <option value="en-US-GuyNeural">Guy - Professional</option>
+                                <option value="en-US-ChristopherNeural">Christopher - Authoritative</option>
+                                <option value="en-US-EricNeural">Eric - Young & Energetic</option>
+                                <option value="en-US-JacobNeural">Jacob - Friendly & Easygoing</option>
+                                <option value="en-US-RogerNeural">Roger - Deep & Mature</option>
+                                <option value="en-US-SteffanNeural">Steffan - Warm & Reliable</option>
+                                <option value="en-US-TonyNeural">Tony - Professional & Calm</option>
+                            </optgroup>
+                            <optgroup label="🇬🇧 英式英语">
+                                <option value="en-GB-LibbyNeural">Libby - Elegant Female</option>
+                                <option value="en-GB-RyanNeural">Ryan - Natural Male</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <div class="range-group">
+                        <label>
+                            ⚡ 语速
+                            <span class="range-value" id="tts-speed-value">1.0x</span>
+                        </label>
+                        <input type="range" id="tts-speed" min="0.5" max="2.0" step="0.1" value="1.0"
+                               oninput="document.getElementById('tts-speed-value').textContent=this.value+'x'">
+                    </div>
+                </div>
+                
+                <div class="range-group" style="margin-top: 15px;">
+                    <label>
+                        🔊 TTS音量
+                        <span class="range-value" id="tts-vol-value">100%</span>
+                    </label>
+                    <input type="range" id="tts-volume" min="0" max="2" step="0.1" value="1.0"
+                           oninput="document.getElementById('tts-vol-value').textContent=Math.round(this.value*100)+'%'">
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-secondary" id="btn-tts-preview" onclick="previewTTS()" style="flex: 1;">
+                        <span>🔊 试听</span>
+                    </button>
+                    <button class="btn btn-primary" id="btn-tts-generate" onclick="generateTTS()" style="flex: 1;">
+                        <span>✨ 生成语音</span>
+                    </button>
+                </div>
+                
+                <!-- TTS 播放器 -->
+                <div id="tts-player-container" class="hidden" style="margin-top: 15px; padding: 15px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px;">
+                    <p style="color: var(--success); margin: 0 0 10px 0;">✅ 语音生成成功！可与BGM同时混音</p>
+                    <audio id="tts-audio-player" controls style="width: 100%; height: 40px;"></audio>
+                    <input type="hidden" id="tts-filename" value="">
+                </div>
+            </div>
+
             <!-- 视频效果 -->
             <div class="section-title">🎨 视频效果</div>
             
@@ -955,10 +1050,11 @@
             <video class="preview-video" id="preview-player" controls></video>
             
             <!-- 二维码传输区域 -->
-            <div id="qr-section" class="qr-container" style="margin: 20px 0; padding: 20px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); display: none;">
-                <p style="margin-bottom: 15px; color: var(--text-muted);">📱 iPhone 扫码直接下载到手机</p>
-                <img id="qr-image" src="" alt="下载二维码" style="max-width: 200px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-                <p id="qr-tip" style="margin-top: 10px; font-size: 0.9em; color: var(--accent);"></p>
+            <div id="qr-section" style="margin: 25px 0; padding: 25px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-radius: 16px; border: 2px solid var(--primary); text-align: center; display: none;">
+                <p style="margin-bottom: 5px; color: var(--text); font-size: 1.1em; font-weight: 600;">📱 手机扫码下载</p>
+                <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 0.9em;">使用微信/浏览器扫描二维码即可下载视频</p>
+                <img id="qr-image" src="" alt="下载二维码" style="max-width: 220px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); background: white; padding: 10px;">
+                <p id="qr-url" style="margin-top: 15px; font-size: 0.85em; color: var(--accent); font-family: monospace; word-break: break-all;"></p>
             </div>
             
             <div class="action-buttons">
@@ -1308,6 +1404,34 @@
                 };
             }
 
+            // 获取 TTS 配置
+            const useTTS = document.getElementById('opt-tts').checked;
+            let ttsConfig = {};
+            
+            if (useTTS) {
+                const ttsText = document.getElementById('tts-text').value.trim();
+                const ttsFilename = document.getElementById('tts-filename').value;
+                
+                if (!ttsText) {
+                    showStatus('edit-status', '请勾选AI配音后输入文案内容', true);
+                    return;
+                }
+                
+                if (!ttsFilename) {
+                    showStatus('edit-status', '请先生成语音', true);
+                    return;
+                }
+                
+                ttsConfig = {
+                    use_tts: true,
+                    tts_filename: ttsFilename,
+                    tts_text: ttsText,
+                    tts_voice: document.getElementById('tts-voice').value,
+                    tts_speed: parseFloat(document.getElementById('tts-speed').value),
+                    tts_volume: parseFloat(document.getElementById('tts-volume').value)
+                };
+            }
+
             setLoading('btn-edit', true);
             
             // 清空之前的日志显示
@@ -1327,11 +1451,12 @@
                 logo_select: logoSelect,
                 logo_position: document.getElementById('logo-position').value,
                 logo_size: parseFloat(document.getElementById('logo-size').value),
-                replace_audio: replaceAudio,
+                replace_audio: replaceAudio || useTTS,  // 使用TTS时自动替换原声
                 bgm_select: bgmSelect,
                 bgm_volume: parseFloat(document.getElementById('bgm-volume').value),
-                original_volume: parseFloat(document.getElementById('original-volume').value),
-                ...subtitleConfig
+                original_volume: useTTS ? 0 : parseFloat(document.getElementById('original-volume').value),  // TTS时原声为0
+                ...subtitleConfig,
+                ...ttsConfig
             };
 
             try {
@@ -1354,11 +1479,16 @@
                     if (result.data.qr_url) {
                         const qrSection = document.getElementById('qr-section');
                         const qrImage = document.getElementById('qr-image');
-                        const qrTip = document.getElementById('qr-tip');
+                        const qrUrl = document.getElementById('qr-url');
                         
                         qrImage.src = result.data.qr_url;
-                        qrTip.textContent = result.data.qr_tip || 'iPhone 扫码直接下载';
+                        qrUrl.textContent = result.data.download_url || '';
                         qrSection.style.display = 'block';
+                        
+                        // 显示局域网地址提示
+                        if (result.data.local_ip) {
+                            console.log('🌐 局域网访问地址: http://' + result.data.local_ip + ':5000');
+                        }
                     }
                     
                     document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
@@ -1403,6 +1533,98 @@
             } else {
                 logsContainer.style.display = 'none';
                 toggle.innerHTML = '📋 查看详细日志 ▼';
+            }
+        }
+        
+        // ========== TTS 脚本配音功能 ==========
+        let currentTTSFile = null;
+        
+        function toggleTTSPanel() {
+            const panel = document.getElementById('tts-config-panel');
+            const isChecked = document.getElementById('opt-tts').checked;
+            panel.style.display = isChecked ? 'block' : 'none';
+        }
+        
+        async function previewTTS() {
+            const text = document.getElementById('tts-text').value.trim();
+            if (!text) {
+                showStatus('edit-status', '❌ 请输入文案内容', true);
+                return;
+            }
+            
+            const btn = document.getElementById('btn-tts-preview');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 5px;"></div>生成中...';
+            
+            try {
+                const voice = document.getElementById('tts-voice').value;
+                const speed = parseFloat(document.getElementById('tts-speed').value);
+                
+                const res = await fetch('/api/tts/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, voice, speed })
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    const player = document.getElementById('tts-audio-player');
+                    player.src = result.data.preview_url;
+                    player.play();
+                    showStatus('edit-status', '✅ 试听生成成功！');
+                } else {
+                    showStatus('edit-status', '❌ ' + (result.error || '生成失败'), true);
+                }
+            } catch (e) {
+                showStatus('edit-status', '❌ 网络错误: ' + e.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔊 试听</span>';
+            }
+        }
+        
+        async function generateTTS() {
+            const text = document.getElementById('tts-text').value.trim();
+            if (!text) {
+                showStatus('edit-status', '❌ 请输入文案内容', true);
+                return;
+            }
+            
+            const btn = document.getElementById('btn-tts-generate');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 5px;"></div>生成中...';
+            
+            try {
+                const voice = document.getElementById('tts-voice').value;
+                const speed = parseFloat(document.getElementById('tts-speed').value);
+                
+                const res = await fetch('/api/tts/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, voice, speed })
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    currentTTSFile = result.data.filename;
+                    
+                    // 保存文件名到隐藏字段
+                    document.getElementById('tts-filename').value = result.data.filename;
+                    
+                    // 显示播放器
+                    document.getElementById('tts-player-container').classList.remove('hidden');
+                    const player = document.getElementById('tts-audio-player');
+                    player.src = result.data.preview_url;
+                    
+                    showStatus('edit-status', '✅ 语音生成成功！点击「开始剪辑」即可应用到视频');
+                } else {
+                    showStatus('edit-status', '❌ ' + (result.error || '生成失败'), true);
+                }
+            } catch (e) {
+                showStatus('edit-status', '❌ 网络错误: ' + e.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>✨ 生成语音</span>';
             }
         }
     </script>

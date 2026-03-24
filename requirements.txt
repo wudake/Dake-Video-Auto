@@ -14,3 +14,6 @@ playwright>=1.40.0
 
 # 语音识别
 openai-whisper>=20231117
+
+# TTS 语音合成
+edge-tts>=6.1.0

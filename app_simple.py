@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 import subprocess
 import sys
 import json
+import asyncio
 from pathlib import Path
 from werkzeug.utils import secure_filename
 
@@ -10,6 +11,15 @@ BASE_DIR = Path(__file__).parent
 
 # 添加路径
 sys.path.insert(0, str(BASE_DIR / "core"))
+
+# ========== TTS 相关导入 ==========
+from tts_generator import TTSGenerator, ScriptToSpeech
+
+# ========== 二维码导入 ==========
+from qr_generator import generate_video_qr, get_local_ip
+
+# TTS 生成器实例
+tts_generator = TTSGenerator(output_dir=str(BASE_DIR / "assets" / "tts"))
 
 @app.route("/")
 def index():
@@ -80,6 +90,14 @@ def edit_video():
     if not note_id:
         return jsonify({"success": False, "error": "未指定视频"})
     
+    # 处理 TTS 配置
+    if config.get("use_tts") and config.get("tts_filename"):
+        tts_path = BASE_DIR / "assets" / "tts" / config["tts_filename"]
+        if tts_path.exists():
+            config["tts_audio_path"] = str(tts_path)
+        else:
+            return jsonify({"success": False, "error": "TTS 音频文件不存在，请重新生成"})
+    
     (BASE_DIR / ".temp_config.json").write_text(
         json.dumps({"note_id": note_id, "config": config}), encoding='utf-8'
     )
@@ -109,22 +127,24 @@ def edit_video():
             
             # 生成二维码便于手机下载
             try:
-                sys.path.insert(0, str(BASE_DIR / "core"))
-                from video_transfer import generate_video_qr
+                from qr_generator import generate_video_qr
                 qr_result = generate_video_qr(output_name, port=5000, output_dir=str(BASE_DIR / "static"))
                 qr_url = f"/static/{qr_result['qr_filename']}"
+                local_ip = qr_result['local_ip']
             except Exception as e:
                 qr_url = None
+                local_ip = get_local_ip()
                 print(f"二维码生成失败: {e}")
             
             response_data = {
                 "output_name": output_name,
                 "preview_url": f"/api/preview/{output_name}",
-                "download_url": f"/api/download/edited/{output_name}"
+                "download_url": f"/api/download/edited/{output_name}",
+                "local_ip": local_ip
             }
             if qr_url:
                 response_data["qr_url"] = qr_url
-                response_data["qr_tip"] = "iPhone 扫码直接下载"
+                response_data["qr_tip"] = "📱 手机扫码直接下载"
             
             return jsonify({"success": True, "data": response_data})
         else:
@@ -176,6 +196,163 @@ def upload_bgm():
         file.save(bgm_dir / secure_filename(file.filename))
         return jsonify({"success": True, "message": "BGM 上传成功"})
     return jsonify({"success": False, "error": "仅支持 MP3/M4A/WAV"})
+
+
+# ========== TTS 脚本配音 API ==========
+
+@app.route("/api/tts/voices", methods=["GET"])
+def get_tts_voices():
+    """获取可用 TTS 音色列表"""
+    try:
+        voices = tts_generator.get_voices_list()
+        return jsonify({"success": True, "data": {"voices": voices}})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/tts/generate", methods=["POST"])
+def generate_tts():
+    """生成 TTS 语音"""
+    data = request.json
+    text = data.get("text", "").strip()
+    voice = data.get("voice", "zh-CN-XiaoxiaoNeural")
+    speed = data.get("speed", 1.0)
+    
+    if not text:
+        return jsonify({"success": False, "error": "文本内容不能为空"})
+    
+    try:
+        # 生成文件名
+        import hashlib
+        import time
+        text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
+        timestamp = int(time.time())
+        filename = f"tts_{timestamp}_{text_hash}.mp3"
+        output_path = BASE_DIR / "assets" / "tts" / filename
+        
+        # 生成语音
+        tts_generator.generate_with_speed(text, str(output_path), voice, speed)
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "filename": filename,
+                "path": str(output_path),
+                "preview_url": f"/api/tts/preview/{filename}",
+                "text": text,
+                "voice": voice,
+                "speed": speed
+            }
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        })
+
+
+@app.route("/api/tts/preview/<filename>")
+def preview_tts(filename):
+    """TTS 音频试听"""
+    from werkzeug.utils import secure_filename
+    safe_filename = secure_filename(filename)
+    tts_path = BASE_DIR / "assets" / "tts" / safe_filename
+    
+    if not tts_path.exists():
+        return jsonify({"error": "文件不存在"}), 404
+    
+    return send_from_directory(BASE_DIR / "assets" / "tts", safe_filename)
+
+
+@app.route("/api/tts/list")
+def list_tts():
+    """列出所有已生成的 TTS 文件"""
+    tts_dir = BASE_DIR / "assets" / "tts"
+    tts_files = []
+    if tts_dir.exists():
+        for f in tts_dir.glob("*.mp3"):
+            tts_files.append({
+                "name": f.name,
+                "size_mb": round(f.stat().st_size / 1024 / 1024, 2),
+                "created": f.stat().st_mtime
+            })
+        tts_files.sort(key=lambda x: x["created"], reverse=True)
+    return jsonify({"success": True, "data": {"tts_files": tts_files}})
+
+
+@app.route("/api/tts/edit", methods=["POST"])
+def edit_with_tts():
+    """
+    使用 TTS 音频剪辑视频
+    类似 /api/edit，但使用 TTS 生成的音频替代原声/BGM
+    """
+    data = request.json
+    note_id = data.get("note_id")
+    tts_filename = data.get("tts_filename")
+    config = data.get("config", {})
+    
+    if not note_id:
+        return jsonify({"success": False, "error": "未指定视频"})
+    
+    if not tts_filename:
+        return jsonify({"success": False, "error": "未指定 TTS 音频"})
+    
+    tts_path = BASE_DIR / "assets" / "tts" / tts_filename
+    if not tts_path.exists():
+        return jsonify({"success": False, "error": "TTS 音频文件不存在"})
+    
+    # 将 TTS 音频路径写入配置，供 edit_worker 使用
+    config["tts_audio_path"] = str(tts_path)
+    config["use_tts"] = True
+    
+    (BASE_DIR / ".temp_config.json").write_text(
+        json.dumps({"note_id": note_id, "config": config}), encoding='utf-8'
+    )
+    
+    try:
+        result = subprocess.run(
+            [sys.executable, str(BASE_DIR / "edit_worker.py")],
+            capture_output=True, text=True, timeout=120, cwd=str(BASE_DIR)
+        )
+        
+        stderr_logs = result.stderr.strip().split('\n') if result.stderr else []
+        
+        result_file = BASE_DIR / ".temp_edit_result.json"
+        if result_file.exists():
+            edit_result = json.loads(result_file.read_text(encoding='utf-8'))
+            result_file.unlink()
+        else:
+            return jsonify({
+                "success": False,
+                "error": "剪辑器未返回结果",
+                "logs": stderr_logs
+            })
+        
+        if edit_result.get("success"):
+            output_name = edit_result["output_name"]
+            return jsonify({
+                "success": True,
+                "data": {
+                    "output_name": output_name,
+                    "preview_url": f"/api/preview/{output_name}",
+                    "download_url": f"/api/download/edited/{output_name}"
+                }
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": edit_result.get("error", "剪辑失败"),
+                "logs": edit_result.get("logs", stderr_logs)
+            })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        })
 
 
 @app.route("/api/bgm/preview/<filename>")
@@ -449,6 +626,51 @@ def publish_assistant():
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+
+# ========== 二维码 API ==========
+
+@app.route("/api/qr/generate/<filename>")
+def generate_qr(filename):
+    """生成视频下载二维码"""
+    from werkzeug.utils import secure_filename
+    safe_filename = secure_filename(filename)
+    
+    video_path = BASE_DIR / "output" / safe_filename
+    if not video_path.exists():
+        return jsonify({"success": False, "error": "视频文件不存在"})
+    
+    try:
+        # 生成二维码
+        result = generate_video_qr(
+            safe_filename, 
+            port=5000, 
+            output_dir=str(BASE_DIR / "static")
+        )
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "qr_url": f"/static/{result['qr_filename']}",
+                "download_url": result['download_url'],
+                "local_ip": result['local_ip']
+            }
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/qr/ip")
+def get_server_ip():
+    """获取服务器局域网IP"""
+    return jsonify({
+        "success": True,
+        "data": {
+            "ip": get_local_ip(),
+            "port": 5000,
+            "url": f"http://{get_local_ip()}:5000"
+        }
+    })
 
 
 if __name__ == "__main__":

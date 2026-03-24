@@ -35,3 +35,6 @@ videos/raw/*.mp4
 # OS
 .DS_Store
 Thumbs.db
+
+# 生成的二维码
+static/qr_*.png
