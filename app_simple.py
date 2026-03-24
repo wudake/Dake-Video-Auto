@@ -674,5 +674,24 @@ def get_server_ip():
 
 
 if __name__ == "__main__":
-    print("🚀 启动服务: http://172.20.5.151:5000")
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=False)
+    # 获取服务器IP（优先环境变量，其次自动检测）
+    import os
+    import socket
+    
+    def get_server_ip():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "0.0.0.0"
+    
+    server_ip = os.environ.get('SERVER_IP', get_server_ip())
+    server_port = int(os.environ.get('PORT', 5000))
+    
+    print(f"🚀 启动服务: http://{server_ip}:{server_port}")
+    print(f"   本地访问: http://127.0.0.1:{server_port}")
+    print(f"   局域网访问: http://0.0.0.0:{server_port}")
+    app.run(host="0.0.0.0", port=server_port, debug=False, threaded=False)
