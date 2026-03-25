@@ -21,32 +21,38 @@ class TTSGenerator:
         # 中文男声
         "zh-CN-YunjianNeural": {"name": "云健", "gender": "男声", "desc": "新闻播报"},
         "zh-CN-YunxiNeural": {"name": "云希", "gender": "男声", "desc": "年轻活力"},
+        "zh-CN-YunxiaNeural": {"name": "云霞", "gender": "男声", "desc": "童声"},
         "zh-CN-YunyangNeural": {"name": "云扬", "gender": "男声", "desc": "成熟稳重"},
         # 英文 - 美式英语 (en-US)
-        "en-US-AriaNeural": {"name": "Aria", "gender": "女声", "desc": "美式英语 - 专业自信"},
         "en-US-AnaNeural": {"name": "Ana", "gender": "女声", "desc": "美式英语 - 年轻活泼"},
+        "en-US-AriaNeural": {"name": "Aria", "gender": "女声", "desc": "美式英语 - 专业自信"},
+        "en-US-AvaNeural": {"name": "Ava", "gender": "女声", "desc": "美式英语 - 自然优雅"},
+        "en-US-AvaMultilingualNeural": {"name": "Ava(多语言)", "gender": "女声", "desc": "美式英语 - 多语言"},
+        "en-US-EmmaNeural": {"name": "Emma", "gender": "女声", "desc": "美式英语 - 温暖友好"},
+        "en-US-EmmaMultilingualNeural": {"name": "Emma(多语言)", "gender": "女声", "desc": "美式英语 - 多语言"},
         "en-US-JennyNeural": {"name": "Jenny", "gender": "女声", "desc": "美式英语 - 清晰友好"},
         "en-US-MichelleNeural": {"name": "Michelle", "gender": "女声", "desc": "美式英语 - 温暖亲切"},
-        "en-US-AmberNeural": {"name": "Amber", "gender": "女声", "desc": "美式英语 - 活泼俏皮"},
-        "en-US-AshleyNeural": {"name": "Ashley", "gender": "女声", "desc": "美式英语 - 自然随意"},
-        "en-US-CoraNeural": {"name": "Cora", "gender": "女声", "desc": "美式英语 - 温柔体贴"},
-        "en-US-ElizabethNeural": {"name": "Elizabeth", "gender": "女声", "desc": "美式英语 - 成熟知性"},
-        "en-US-MonicaNeural": {"name": "Monica", "gender": "女声", "desc": "美式英语 - 专业冷静"},
-        "en-US-SaraNeural": {"name": "Sara", "gender": "女声", "desc": "美式英语 - 清新自然"},
-        "en-US-GuyNeural": {"name": "Guy", "gender": "男声", "desc": "美式英语 - 专业稳重"},
+        "en-US-AndrewNeural": {"name": "Andrew", "gender": "男声", "desc": "美式英语 - 稳重专业"},
+        "en-US-AndrewMultilingualNeural": {"name": "Andrew(多语言)", "gender": "男声", "desc": "美式英语 - 多语言"},
+        "en-US-BrianNeural": {"name": "Brian", "gender": "男声", "desc": "美式英语 - 清晰有力"},
+        "en-US-BrianMultilingualNeural": {"name": "Brian(多语言)", "gender": "男声", "desc": "美式英语 - 多语言"},
         "en-US-ChristopherNeural": {"name": "Christopher", "gender": "男声", "desc": "美式英语 - 权威自信"},
         "en-US-EricNeural": {"name": "Eric", "gender": "男声", "desc": "美式英语 - 年轻活力"},
-        "en-US-JacobNeural": {"name": "Jacob", "gender": "男声", "desc": "美式英语 - 友好随和"},
+        "en-US-GuyNeural": {"name": "Guy", "gender": "男声", "desc": "美式英语 - 专业稳重"},
         "en-US-RogerNeural": {"name": "Roger", "gender": "男声", "desc": "美式英语 - 成熟深沉"},
         "en-US-SteffanNeural": {"name": "Steffan", "gender": "男声", "desc": "美式英语 - 温暖可靠"},
-        "en-US-TonyNeural": {"name": "Tony", "gender": "男声", "desc": "美式英语 - 专业冷静"},
         # 英式英语
         "en-GB-LibbyNeural": {"name": "Libby", "gender": "女声", "desc": "英式英语 - 优雅专业"},
+        "en-GB-MaisieNeural": {"name": "Maisie", "gender": "女声", "desc": "英式英语 - 活泼年轻"},
         "en-GB-SoniaNeural": {"name": "Sonia", "gender": "女声", "desc": "英式英语 - 友好清晰"},
         "en-GB-RyanNeural": {"name": "Ryan", "gender": "男声", "desc": "英式英语 - 稳重自然"},
+        "en-GB-ThomasNeural": {"name": "Thomas", "gender": "男声", "desc": "英式英语 - 成熟稳重"},
         # 日语
+        "ja-JP-KeitaNeural": {"name": "Keita", "gender": "男声", "desc": "日语"},
         "ja-JP-NanamiNeural": {"name": "七海", "gender": "女声", "desc": "日语"},
         # 韩语
+        "ko-KR-HyunsuMultilingualNeural": {"name": "贤秀(多语言)", "gender": "男声", "desc": "韩语 - 多语言"},
+        "ko-KR-InJoonNeural": {"name": "仁俊", "gender": "男声", "desc": "韩语"},
         "ko-KR-SunHiNeural": {"name": "善熙", "gender": "女声", "desc": "韩语"},
     }
     
@@ -70,19 +76,50 @@ class TTSGenerator:
         Returns:
             输出文件路径
         """
+        import edge_tts.exceptions
+        
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
-        communicate = edge_tts.Communicate(
-            text=text,
-            voice=voice,
-            rate=rate,
-            volume=volume,
-            pitch=pitch
-        )
+        # 验证文本
+        if not text or not text.strip():
+            raise ValueError("文本内容不能为空")
         
-        await communicate.save(str(output_path))
-        return str(output_path)
+        # 清理文本（移除可能导致问题的字符）
+        text = text.strip()
+        
+        try:
+            communicate = edge_tts.Communicate(
+                text=text,
+                voice=voice,
+                rate=rate,
+                volume=volume,
+                pitch=pitch
+            )
+            
+            await communicate.save(str(output_path))
+            
+            # 验证文件是否成功生成
+            if not output_path.exists():
+                raise RuntimeError("语音文件未生成")
+            if output_path.stat().st_size == 0:
+                output_path.unlink()
+                raise RuntimeError("语音文件为空")
+            
+            return str(output_path)
+            
+        except edge_tts.exceptions.NoAudioReceived:
+            raise RuntimeError("微软TTS服务未返回音频，请检查音色是否有效或稍后重试")
+        except edge_tts.exceptions.VoiceNotFound:
+            raise ValueError(f"音色 '{voice}' 不存在，请使用有效的音色ID")
+        except Exception as e:
+            # 如果文件已生成但可能损坏，删除它
+            if output_path.exists():
+                try:
+                    output_path.unlink()
+                except:
+                    pass
+            raise
     
     def generate(self, text, output_path=None, voice="zh-CN-XiaoxiaoNeural",
                  rate="+0%", volume="+0%", pitch="+0Hz"):
@@ -102,6 +139,28 @@ class TTSGenerator:
         """
         if output_path is None:
             import hashlib
+            import time
+            # 生成唯一文件名
+            text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
+            timestamp = int(time.time())
+            output_path = self.output_dir / f"tts_{voice.split('-')[-1]}_{timestamp}_{text_hash}.mp3"
+        
+        try:
+            return asyncio.run(self.generate_async(text, output_path, voice, rate, volume, pitch))
+        except RuntimeError as e:
+            # 如果在已有事件循环中运行，尝试直接使用事件循环
+            if "cannot be called from a running event loop" in str(e):
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # 使用 run_coroutine_threadsafe 或 nest_asyncio
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(
+                            asyncio.run, 
+                            self.generate_async(text, output_path, voice, rate, volume, pitch)
+                        )
+                        return future.result()
+            raise
             import time
             # 生成唯一文件名
             text_hash = hashlib.md5(text.encode()).hexdigest()[:8]

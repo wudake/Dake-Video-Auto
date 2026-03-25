@@ -532,7 +532,7 @@ class AdvancedVideoEditor:
             audio_inputs.append((tts_idx, tts_volume, "TTS配音"))
             print(f"   TTS: {tts_path.name}")
         
-        # 3. BGM
+        # 3. BGM - 需要循环播放以匹配视频时长
         if use_bgm and bgm_path:
             inputs.extend(["-i", str(bgm_path)])
             bgm_idx = input_idx
@@ -551,7 +551,12 @@ class AdvancedVideoEditor:
             if idx == 0 and speed != 1.0 and speed <= 2.0:
                 filter_chains.append(f"[0:a]atempo={speed},volume={vol}[a]")
             else:
-                filter_chains.append(f"[{idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}[a]")
+                # BGM需要循环播放直到视频结束
+                if name == "BGM":
+                    # 使用aloop循环BGM，然后裁剪到视频时长
+                    filter_chains.append(f"[{idx}:a]aloop=loop=-1:size=0,atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}[a]")
+                else:
+                    filter_chains.append(f"[{idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}[a]")
             audio_out = "[a]"
         else:
             # 多路音频混音
@@ -559,16 +564,20 @@ class AdvancedVideoEditor:
             for idx, vol, name in audio_inputs:
                 label = f"[a{idx}]"
                 audio_labels.append(label)
+                
                 if idx == 0 and speed != 1.0 and speed <= 2.0:
                     # 原声需要变速
                     filter_chains.append(f"[0:a]atempo={speed},volume={vol}{label}")
+                elif name == "BGM":
+                    # BGM循环播放并裁剪到视频时长
+                    filter_chains.append(f"[{idx}:a]aloop=loop=-1:size=0,atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}{label}")
                 else:
-                    # 其他音频裁剪并调整音量
+                    # 其他音频（如TTS）裁剪到视频时长
                     filter_chains.append(f"[{idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}{label}")
             
-            # 混音
+            # 混音 - 使用longest确保BGM持续整个视频
             num_inputs = len(audio_inputs)
-            filter_chains.append(f"{''.join(audio_labels)}amix=inputs={num_inputs}:duration=first:dropout_transition=3[a]")
+            filter_chains.append(f"{''.join(audio_labels)}amix=inputs={num_inputs}:duration=longest:dropout_transition=3[a]")
             audio_out = "[a]"
         
         filter_complex = ";".join(filter_chains)

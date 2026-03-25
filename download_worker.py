@@ -10,6 +10,7 @@ from pathlib import Path
 # 添加路径
 sys.path.insert(0, "core")
 from downloader_pw import XHSPlaywrightDownloader
+from douyin_api_downloader import DouyinAPIDownloader
 
 
 def detect_platform(url):
@@ -60,11 +61,9 @@ def main():
             dl = XHSPlaywrightDownloader(raw_dir=str(raw_dir), headless=True)
             return await dl.download(url)
         elif platform == 'douyin':
-            print(f"📱 识别平台: 抖音（暂不支持）")
-            return {
-                "status": "error", 
-                "error": "抖音视频下载功能暂时关闭，请使用小红书链接"
-            }
+            print(f"📱 识别平台: 抖音")
+            dl = DouyinAPIDownloader(raw_dir=str(raw_dir))
+            return dl.download(url)
         else:
             return {"status": "error", "error": f"不支持的平台: {url}"}
     

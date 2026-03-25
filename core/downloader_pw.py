@@ -133,45 +133,100 @@ class XHSPlaywrightDownloader:
                 if 'hd' in u or u.count('=') > video_url.count('='):
                     video_url = u
             
-            print(f"\n📥 开始下载视频...")
-            print(f"🔗 URL: {video_url[:80]}...")
+            return await self._download_video(video_url, output_path, note_id, url)
+        else:
+            # Playwright 失败，尝试 yt-dlp
+            print("⚠️ Playwright 未找到视频，尝试 yt-dlp 备用方案...")
+            return await self._download_with_ytdlp(url, output_path, note_id)
+    
+    async def _download_video(self, video_url, output_path, note_id, original_url):
+        """下载视频文件"""
+        print(f"\n📥 开始下载视频...")
+        print(f"🔗 URL: {video_url[:80]}...")
+        
+        import requests
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Referer': 'https://www.xiaohongshu.com/'
+            }
+            response = requests.get(video_url, headers=headers, stream=True, timeout=60)
+            response.raise_for_status()
             
-            import requests
-            try:
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-                    'Referer': 'https://www.xiaohongshu.com/'
-                }
-                response = requests.get(video_url, headers=headers, stream=True, timeout=60)
-                response.raise_for_status()
-                
-                total_size = int(response.headers.get('content-length', 0))
-                print(f"📦 文件大小: {total_size / 1024 / 1024:.2f} MB")
-                
-                with open(output_path, 'wb') as f:
-                    downloaded = 0
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                
+            total_size = int(response.headers.get('content-length', 0))
+            print(f"📦 文件大小: {total_size / 1024 / 1024:.2f} MB")
+            
+            with open(output_path, 'wb') as f:
+                downloaded = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+            
+            file_size = output_path.stat().st_size / 1024 / 1024
+            print(f"✅ 下载完成: {output_path} ({file_size:.2f} MB)")
+            return {
+                "note_id": note_id,
+                "url": original_url,
+                "video_url": video_url,
+                "output_path": str(output_path),
+                "status": "success",
+                "size_mb": file_size
+            }
+            
+        except Exception as e:
+            print(f"❌ 下载失败: {e}")
+            return {"note_id": note_id, "url": original_url, "status": "download_failed", "error": str(e)}
+    
+    async def _download_with_ytdlp(self, url, output_path, note_id):
+        """使用 yt-dlp 作为备用下载方案"""
+        import subprocess
+        import shutil
+        
+        print(f"🔄 使用 yt-dlp 下载: {url}")
+        
+        # 检查 yt-dlp 是否安装
+        ytdlp_path = shutil.which("yt-dlp")
+        if not ytdlp_path:
+            print("❌ yt-dlp 未安装")
+            return {"note_id": note_id, "url": url, "status": "no_video_found", "error": "Playwright 和 yt-dlp 都失败"}
+        
+        try:
+            cmd = [
+                ytdlp_path,
+                '-o', str(output_path),
+                '--format', 'best[ext=mp4]/best',
+                '--no-playlist',
+                '--quiet',
+                '--no-warnings',
+                '--add-header', 'Referer:https://www.xiaohongshu.com/',
+                '--add-header', 'User-Agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                url
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            
+            if result.returncode == 0 and output_path.exists():
                 file_size = output_path.stat().st_size / 1024 / 1024
-                print(f"✅ 下载完成: {output_path} ({file_size:.2f} MB)")
+                print(f"✅ yt-dlp 下载完成: {output_path} ({file_size:.2f} MB)")
                 return {
                     "note_id": note_id,
                     "url": url,
-                    "video_url": video_url,
                     "output_path": str(output_path),
                     "status": "success",
-                    "size_mb": file_size
+                    "size_mb": file_size,
+                    "source": "ytdlp"
                 }
+            else:
+                print(f"❌ yt-dlp 失败: {result.stderr}")
+                return {"note_id": note_id, "url": url, "status": "no_video_found", "error": "Playwright 和 yt-dlp 都失败"}
                 
-            except Exception as e:
-                print(f"❌ 下载失败: {e}")
-                return {"note_id": note_id, "url": url, "status": "download_failed", "error": str(e)}
-        else:
-            print("❌ 未找到视频地址")
-            return {"note_id": note_id, "url": url, "status": "no_video_found"}
+        except subprocess.TimeoutExpired:
+            print("❌ yt-dlp 超时")
+            return {"note_id": note_id, "url": url, "status": "timeout", "error": "yt-dlp 下载超时"}
+        except Exception as e:
+            print(f"❌ yt-dlp 异常: {e}")
+            return {"note_id": note_id, "url": url, "status": "error", "error": str(e)}
 
 
 async def download_xhs_video(url, output_dir="videos/raw", headless=True):
