@@ -369,5 +369,6 @@ MIT
 | **项目路径** | `/home/dake/Dake-Video-Auto/` |
 | **维护者** | Dake & Zhushou |
 | **创建时间** | 2026-03-10 |
-| **最后更新** | 2026-03-25 (v5.2.0) |
+| **最后更新** | 2026-03-26 (v5.4.0) |
 | **服务对象** | AT-Machining (数控加工) & Boswindor (门窗制造) |
+*服务对象** | AT-Machining (数控加工) & Boswindor (门窗制造) |
