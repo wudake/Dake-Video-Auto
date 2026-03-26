@@ -1,16 +1,60 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for
 import subprocess
 import sys
 import json
 import asyncio
 from pathlib import Path
 from werkzeug.utils import secure_filename
+from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = 'dake-video-auto-secret-key-2026'  # 用于 session 加密
 BASE_DIR = Path(__file__).parent
+
+# 用户配置
+USERS = {
+    'admin': 'Boswindor123$%'
+}
+
+# 登录验证装饰器
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # 添加路径
 sys.path.insert(0, str(BASE_DIR / "core"))
+
+# ========== 登录相关路由 ==========
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """登录页面"""
+    if request.method == "POST":
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        
+        if username in USERS and USERS[username] == password:
+            session['logged_in'] = True
+            session['username'] = username
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='用户名或密码错误')
+    
+    # 如果已登录，直接跳转到首页
+    if 'logged_in' in session:
+        return redirect(url_for('index'))
+    
+    return render_template('login.html')
+
+@app.route("/logout")
+def logout():
+    """登出"""
+    session.clear()
+    return redirect(url_for('login'))
 
 # ========== TTS 相关导入 ==========
 from tts_generator import TTSGenerator, ScriptToSpeech
@@ -22,8 +66,9 @@ from qr_generator import generate_video_qr, get_local_ip
 tts_generator = TTSGenerator(output_dir=str(BASE_DIR / "assets" / "tts"))
 
 @app.route("/")
+@login_required
 def index():
-    return render_template("index.html")
+    return render_template("index.html", username=session.get('username'))
 
 @app.route("/api/logos/list")
 def list_logos():
