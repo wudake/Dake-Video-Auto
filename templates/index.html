@@ -985,20 +985,23 @@
                 </div>
                 
                 <div class="input-group">
-                    <label>颜色方案</label>
+                    <label>字幕样式</label>
                     <select id="subtitle-style" class="select-box">
-                        <option value="yellow_black">黄字黑边</option>
-                        <option value="white_black">白字黑边</option>
-                        <option value="black_white">黑字白边</option>
-                        <option value="cyan_black">青字黑边</option>
-                        <option value="pink_black">粉字黑边</option>
-                        <option value="white_blue">白字蓝边</option>
+                        <option value="yellow_classic">经典黄字</option>
+                        <option value="tiktok_box">TikTok风格</option>
+                        <option value="neon_cyan">霓虹青光</option>
+                        <option value="neon_pink">霓虹粉光</option>
+                        <option value="movie_clean">影视字幕</option>
+                        <option value="variety_bold">综艺风格</option>
+                        <option value="minimal_white">极简白字</option>
+                        <option value="white_outline">白字黑边</option>
+                        <option value="dark_box">黑底白字</option>
                     </select>
                 </div>
                 
                 <div class="input-group">
                     <label>字体大小</label>
-                    <input type="number" id="subtitle-font-size" class="select-box" value="10" min="10" max="72" style="width: 100%;">
+                    <input type="number" id="subtitle-font-size" class="select-box" value="9" min="9" max="72" style="width: 100%;">
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1023,16 +1026,16 @@
                 <div class="input-group">
                     <label>描边宽度</label>
                     <select id="subtitle-outline" class="select-box">
-                        <option value="1">细 (1px)</option>
-                        <option value="2" selected>中 (2px)</option>
+                        <option value="1" selected>细 (1px)</option>
+                        <option value="2">中 (2px)</option>
                         <option value="3">粗 (3px)</option>
                     </select>
                 </div>
                 
                 <!-- 预览 -->
-                <div style="margin-top: 15px; padding: 15px; background: rgba(0, 0, 0, 0.4); border-radius: 10px; text-align: center;">
-                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">效果预览</div>
-                    <div id="subtitle-preview" style="font-size: 24px; color: #FFD700; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000; font-weight: bold; padding: 10px;">
+                <div style="margin-top: 15px; padding: 20px 15px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); border-radius: 10px; text-align: center; position: relative; overflow: hidden;">
+                    <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 10px; letter-spacing: 1px;">效果预览</div>
+                    <div id="subtitle-preview" style="font-size: 22px; font-weight: bold; padding: 6px 14px; display: inline-block; border-radius: 4px; transition: all 0.3s ease; font-family: sans-serif;">
                         Hello World
                     </div>
                 </div>
@@ -1238,20 +1241,62 @@
         // 字幕效果实时预览
         function updateSubtitlePreview() {
             const style = document.getElementById('subtitle-style').value;
-            const size = document.getElementById('subtitle-font-size').value || 10;
+            const size = document.getElementById('subtitle-font-size').value || 9;
             const preview = document.getElementById('subtitle-preview');
-            
-            const colorMap = {
-                'yellow_black': '#FFD700',
-                'white_black': '#FFFFFF',
-                'black_white': '#000000',
-                'cyan_black': '#00FFFF',
-                'pink_black': '#FF69B4',
-                'white_blue': '#FFFFFF'
+            const displaySize = Math.max(size * 2, 18);
+
+            // 样式配置: color, outlineColor, outlineWidth, shadow, type(outline/box/neon), bgColor, bold
+            const styles = {
+                'yellow_classic': { color: '#FFD700', outlineColor: '#000', outlineWidth: 3, shadow: true, type: 'outline', bold: true },
+                'tiktok_box':     { color: '#FFF', outlineColor: '#000', outlineWidth: 0, shadow: false, type: 'box', bgColor: 'rgba(0,0,0,0.7)', bold: true },
+                'neon_cyan':      { color: '#00FFFF', outlineColor: '#0088FF', outlineWidth: 3, shadow: true, type: 'neon', glowColor: '#00FFFF', bold: true },
+                'neon_pink':      { color: '#FF69B4', outlineColor: '#CC00FF', outlineWidth: 3, shadow: true, type: 'neon', glowColor: '#FF69B4', bold: true },
+                'movie_clean':    { color: '#FFFFFF', outlineColor: '#000', outlineWidth: 1, shadow: false, type: 'outline', bold: false },
+                'variety_bold':   { color: '#FFD700', outlineColor: '#000', outlineWidth: 5, shadow: true, type: 'outline', bold: true },
+                'minimal_white':  { color: '#FFFFFF', outlineColor: '#000', outlineWidth: 1, shadow: false, type: 'outline', bold: true },
+                'white_outline':  { color: '#FFFFFF', outlineColor: '#000', outlineWidth: 3, shadow: true, type: 'outline', bold: true },
+                'dark_box':       { color: '#FFF', outlineColor: '#333', outlineWidth: 0, shadow: false, type: 'box', bgColor: 'rgba(0,0,0,0.8)', bold: true }
             };
-            
-            preview.style.color = colorMap[style] || '#FFD700';
-            preview.style.fontSize = size + 'px';
+
+            const s = styles[style] || styles['yellow_classic'];
+            const ow = s.outlineWidth;
+
+            // 重置样式
+            preview.style.color = s.color;
+            preview.style.fontSize = displaySize + 'px';
+            preview.style.fontWeight = s.bold ? 'bold' : 'normal';
+            preview.style.background = 'none';
+            preview.style.borderRadius = '4px';
+            preview.style.padding = '6px 14px';
+
+            if (s.type === 'box') {
+                // 背景框样式 (TikTok / 黑底白字)
+                preview.style.textShadow = 'none';
+                preview.style.background = s.bgColor;
+                preview.style.borderRadius = '6px';
+                preview.style.padding = '8px 18px';
+            } else if (s.type === 'neon') {
+                // 霓虹发光样式
+                const gc = s.glowColor;
+                preview.style.textShadow = `
+                    0 0 5px ${gc},
+                    0 0 10px ${gc},
+                    0 0 20px ${gc},
+                    0 0 40px ${s.outlineColor},
+                    0 0 2px #000
+                `;
+            } else {
+                // 描边样式 (经典)
+                const oc = s.outlineColor;
+                const shadows = [];
+                for (let x = -ow; x <= ow; x++) {
+                    for (let y = -ow; y <= ow; y++) {
+                        if (x !== 0 || y !== 0) shadows.push(`${x}px ${y}px 0 ${oc}`);
+                    }
+                }
+                if (s.shadow) shadows.push('2px 2px 3px rgba(0,0,0,0.6)');
+                preview.style.textShadow = shadows.join(', ');
+            }
         }
         
         document.getElementById('subtitle-style').addEventListener('change', updateSubtitlePreview);
@@ -1401,10 +1446,10 @@
                     subtitle_start: parseFloat(document.getElementById('subtitle-start').value) || 0,
                     subtitle_end: subtitleEnd ? parseFloat(subtitleEnd) : null,
                     subtitle_style: document.getElementById('subtitle-style').value,
-                    subtitle_font_size: parseInt(document.getElementById('subtitle-font-size').value) || 10,
+                    subtitle_font_size: parseInt(document.getElementById('subtitle-font-size').value) || 9,
                     subtitle_position: document.getElementById('subtitle-position').value,
                     subtitle_align: document.getElementById('subtitle-align').value,
-                    subtitle_outline_width: parseInt(document.getElementById('subtitle-outline').value) || 2
+                    subtitle_outline_width: parseInt(document.getElementById('subtitle-outline').value) || 1
                 };
             }
 

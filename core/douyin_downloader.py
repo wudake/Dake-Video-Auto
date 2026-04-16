@@ -9,8 +9,10 @@ from pathlib import Path
 from urllib.parse import unquote
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 
-# 系统 Chrome 路径
-CHROME_PATH = "/usr/bin/google-chrome"
+# Playwright 自带 Chromium 路径
+import glob as _glob
+_playwright_chrome = _glob.glob("/ms-playwright/chromium-*/chrome-linux64/chrome")
+CHROME_PATH = _playwright_chrome[0] if _playwright_chrome else "/usr/bin/google-chrome"
 
 
 class DouyinPlaywrightDownloader:

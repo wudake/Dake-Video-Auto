@@ -38,3 +38,9 @@ Thumbs.db
 
 # 生成的二维码
 static/qr_*.png
+
+# SSL 证书（敏感）
+ssl/
+
+# TTS 生成的音频文件
+assets/tts/

@@ -34,47 +34,88 @@ class AdvancedVideoEditor:
     
     # 字幕样式预设
     SUBTITLE_STYLES = {
-        "white_black": {
+        "yellow_classic": {
+            "name": "经典黄字",
+            "font_color": "#FFD700",
+            "outline_color": "#000000",
+            "outline_width": 2,
+            "shadow": 1,
+            "border_style": 1,
+            "bold": True
+        },
+        "tiktok_box": {
+            "name": "TikTok风格",
+            "font_color": "#FFFFFF",
+            "outline_color": "#000000",
+            "outline_width": 0,
+            "shadow": 0,
+            "border_style": 3,
+            "bold": True,
+            "back_color": "#CC000000"
+        },
+        "neon_cyan": {
+            "name": "霓虹青光",
+            "font_color": "#00FFFF",
+            "outline_color": "#0088FF",
+            "outline_width": 3,
+            "shadow": 2,
+            "border_style": 1,
+            "bold": True
+        },
+        "neon_pink": {
+            "name": "霓虹粉光",
+            "font_color": "#FF69B4",
+            "outline_color": "#CC00FF",
+            "outline_width": 3,
+            "shadow": 2,
+            "border_style": 1,
+            "bold": True
+        },
+        "movie_clean": {
+            "name": "影视字幕",
+            "font_color": "#FFFFFF",
+            "outline_color": "#000000",
+            "outline_width": 1,
+            "shadow": 0,
+            "border_style": 1,
+            "bold": False
+        },
+        "variety_bold": {
+            "name": "综艺风格",
+            "font_color": "#FFD700",
+            "outline_color": "#000000",
+            "outline_width": 4,
+            "shadow": 2,
+            "border_style": 1,
+            "bold": True
+        },
+        "minimal_white": {
+            "name": "极简白字",
+            "font_color": "#FFFFFF",
+            "outline_color": "#000000",
+            "outline_width": 1,
+            "shadow": 0,
+            "border_style": 1,
+            "bold": True
+        },
+        "white_outline": {
             "name": "白字黑边",
             "font_color": "#FFFFFF",
             "outline_color": "#000000",
             "outline_width": 2,
-            "shadow": 1
+            "shadow": 1,
+            "border_style": 1,
+            "bold": True
         },
-        "yellow_black": {
-            "name": "黄字黑边",
-            "font_color": "#FFFF00",
-            "outline_color": "#000000",
-            "outline_width": 2,
-            "shadow": 1
-        },
-        "white_red": {
-            "name": "白字红边",
+        "dark_box": {
+            "name": "黑底白字",
             "font_color": "#FFFFFF",
-            "outline_color": "#FF0000",
-            "outline_width": 2,
-            "shadow": 1
-        },
-        "black_white": {
-            "name": "黑字白边",
-            "font_color": "#000000",
-            "outline_color": "#FFFFFF",
-            "outline_width": 2,
-            "shadow": 1
-        },
-        "cyan_black": {
-            "name": "青字黑边",
-            "font_color": "#00FFFF",
-            "outline_color": "#000000",
-            "outline_width": 2,
-            "shadow": 1
-        },
-        "pink_black": {
-            "name": "粉字黑边",
-            "font_color": "#FF69B4",
-            "outline_color": "#000000",
-            "outline_width": 2,
-            "shadow": 1
+            "outline_color": "#333333",
+            "outline_width": 0,
+            "shadow": 0,
+            "border_style": 3,
+            "bold": True,
+            "back_color": "#DD000000"
         }
     }
     
@@ -211,20 +252,22 @@ class AdvancedVideoEditor:
             style_config = {}
         
         print(f"\n🔥 烧录字幕: {srt_path.name}")
-        
+
         # 获取样式
-        preset_name = style_config.get("style_preset", "white_black")
-        preset = self.SUBTITLE_STYLES.get(preset_name, self.SUBTITLE_STYLES["white_black"])
-        
+        preset_name = style_config.get("style_preset", "yellow_classic")
+        preset = self.SUBTITLE_STYLES.get(preset_name, self.SUBTITLE_STYLES["yellow_classic"])
+
         font_color = style_config.get("font_color", preset["font_color"])
         outline_color = style_config.get("outline_color", preset["outline_color"])
         outline_width = style_config.get("outline_width", preset["outline_width"])
         shadow = style_config.get("shadow", preset["shadow"])
-        
+        border_style = style_config.get("border_style", preset.get("border_style", 1))
+        bold = style_config.get("bold", preset.get("bold", True))
+
         # 字体大小（自动计算或使用指定值，包括固定大小）
         font_size = style_config.get("font_size")
         custom_size = style_config.get("custom_font_size")
-        
+
         if custom_size is not None and custom_size > 0:
             # 使用自定义固定大小
             font_size = int(custom_size)
@@ -239,11 +282,11 @@ class AdvancedVideoEditor:
             else:
                 font_size = 12
             print(f"   字体大小: 自适应 {font_size}px")
-        
+
         # 位置和对齐
         position = style_config.get("position", "bottom")
         align = style_config.get("align", "center")
-        
+
         # ASS Alignment: 1=左下, 2=中下, 3=右下, 4=左中, 5=中中, 6=右中, 7=左上, 8=中上, 9=右上
         alignment_map = {
             ("top", "left"): 7, ("top", "center"): 8, ("top", "right"): 9,
@@ -251,15 +294,23 @@ class AdvancedVideoEditor:
             ("bottom", "left"): 1, ("bottom", "center"): 2, ("bottom", "right"): 3
         }
         alignment = alignment_map.get((position, align), 2)
-        
+
         # 转换颜色格式
         def hex_to_ass(hex_color):
             hex_color = hex_color.lstrip('#')
+            if len(hex_color) == 8:
+                # 带透明度的格式 #AARRGGBB → &HBBGGRR (ASS alpha 单独处理)
+                a = hex_color[0:2]
+                r = hex_color[2:4]
+                g = hex_color[4:6]
+                b = hex_color[6:8]
+                return f"&H{a}{b}{g}{r}"
             r = hex_color[0:2]
             g = hex_color[2:4]
             b = hex_color[4:6]
             return f"&H{b}{g}{r}"
-        
+
+
         font_color_ass = hex_to_ass(font_color)
         outline_color_ass = hex_to_ass(outline_color)
         
@@ -272,20 +323,29 @@ class AdvancedVideoEditor:
         margin_r = 20 if align == "right" else 0
         
         # 构建 force_style 字符串
-        style_str = (
-            f"FontName=Arial,"
-            f"FontSize={font_size},"
-            f"PrimaryColour={font_color_ass},"
-            f"OutlineColour={outline_color_ass},"
-            f"Outline={outline_width},"
-            f"Shadow={shadow},"
-            f"Alignment={alignment},"
-            f"MarginV={margin_v},"
-            f"MarginL={margin_l},"
-            f"MarginR={margin_r},"
-            f"WrapStyle=0,"
-            f"BorderStyle=1"
-        )
+        bold_val = -1 if bold else 0
+        style_parts = [
+            f"FontName=WenQuanYi Zen Hei",
+            f"FontSize={font_size}",
+            f"PrimaryColour={font_color_ass}",
+            f"OutlineColour={outline_color_ass}",
+            f"Outline={outline_width}",
+            f"Shadow={shadow}",
+            f"Alignment={alignment}",
+            f"MarginV={margin_v}",
+            f"MarginL={margin_l}",
+            f"MarginR={margin_r}",
+            f"WrapStyle=0",
+            f"BorderStyle={border_style}",
+            f"Bold={bold_val}"
+        ]
+
+        # BorderStyle=3 时添加背景色
+        if border_style == 3 and "back_color" in preset:
+            back_color_ass = hex_to_ass(preset["back_color"])
+            style_parts.append(f"BackColour={back_color_ass}")
+
+        style_str = ",".join(style_parts)
         
         vf_filter = f"subtitles={srt_path}:force_style='{style_str}'"
         
@@ -427,11 +487,11 @@ class AdvancedVideoEditor:
         subtitle_text = config.get("subtitle_text", "")
         subtitle_start = config.get("subtitle_start", 0)
         subtitle_end = config.get("subtitle_end", None)  # None表示到视频结尾
-        subtitle_style_preset = config.get("subtitle_style", "yellow_black")
-        subtitle_font_size = config.get("subtitle_font_size", 12)
+        subtitle_style_preset = config.get("subtitle_style", "yellow_classic")
+        subtitle_font_size = config.get("subtitle_font_size", 9)
         subtitle_position = config.get("subtitle_position", "bottom")
         subtitle_align = config.get("subtitle_align", "center")  # left/center/right
-        subtitle_outline_width = config.get("subtitle_outline_width", 2)
+        subtitle_outline_width = config.get("subtitle_outline_width", 1)
         
         print(f"\n🎬 剪辑: {note_id}")
         print(f"   输入: {w}x{h} | {duration:.1f}s")
@@ -504,7 +564,7 @@ class AdvancedVideoEditor:
                 "bottom_right": (f"W-w-{m}", f"H-h-{m}"),
                 "bottom_left": (str(m), f"H-h-{m}"),
                 "top_right": (f"W-w-{m}", str(m)),
-                "top_left": (str(m+54), str(m+74)),
+                "top_left": (str(m+54), str(m+144)),
                 "bottom_center": ("(W-w)/2", f"H-h-{m}")
             }
             x, y = pos_map.get(pos, pos_map["bottom_right"])
@@ -622,8 +682,11 @@ class AdvancedVideoEditor:
                         "position": subtitle_position,
                         "align": subtitle_align,
                         "font_size": subtitle_font_size,
-                        "outline_width": subtitle_outline_width
                     }
+                    # 仅当用户修改了描边宽度时才覆盖预设值
+                    preset = self.SUBTITLE_STYLES.get(subtitle_style_preset, self.SUBTITLE_STYLES["yellow_classic"])
+                    if subtitle_outline_width != preset.get("outline_width", 1):
+                        style_cfg["outline_width"] = subtitle_outline_width
                     
                     # 烧录字幕到新文件
                     final_output = self.edited_dir / f"Dake_Video_Auto_{timestamp}_sub.mp4"

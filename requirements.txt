@@ -17,3 +17,6 @@ openai-whisper>=20231117
 
 # TTS 语音合成
 edge-tts>=6.1.0
+
+# 二维码生成
+qrcode[pil]>=7.4.0
