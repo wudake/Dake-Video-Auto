@@ -872,7 +872,14 @@
                     <input type="range" id="tts-volume" min="0" max="2" step="0.1" value="1.0"
                            oninput="document.getElementById('tts-vol-value').textContent=Math.round(this.value*100)+'%'">
                 </div>
-                
+
+                <div class="options-grid" style="margin-top: 15px;">
+                    <label class="option-item">
+                        <input type="checkbox" id="opt-tts-subtitles">
+                        <span>📝 同步生成字幕（跟随TTS语音）</span>
+                    </label>
+                </div>
+
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="btn btn-secondary" id="btn-tts-preview" onclick="previewTTS()" style="flex: 1;">
                         <span>🔊 试听</span>
@@ -1232,10 +1239,22 @@
             }
         }
 
-        // 字幕面板显示控制
+        // 字幕面板显示控制（手动字幕与TTS字幕互斥）
         document.getElementById('opt-subtitles').addEventListener('change', function() {
             const panel = document.getElementById('subtitle-config-panel');
             panel.style.display = this.checked ? 'block' : 'none';
+            if (this.checked) {
+                // 关闭TTS同步字幕
+                document.getElementById('opt-tts-subtitles').checked = false;
+            }
+        });
+
+        document.getElementById('opt-tts-subtitles').addEventListener('change', function() {
+            if (this.checked) {
+                // 关闭手动字幕
+                document.getElementById('opt-subtitles').checked = false;
+                document.getElementById('subtitle-config-panel').style.display = 'none';
+            }
         });
 
         // 字幕效果实时预览
@@ -1477,7 +1496,8 @@
                     tts_text: ttsText,
                     tts_voice: document.getElementById('tts-voice').value,
                     tts_speed: parseFloat(document.getElementById('tts-speed').value),
-                    tts_volume: parseFloat(document.getElementById('tts-volume').value)
+                    tts_volume: parseFloat(document.getElementById('tts-volume').value),
+                    use_tts_subtitles: document.getElementById('opt-tts-subtitles').checked
                 };
             }
 

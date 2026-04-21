@@ -7,7 +7,6 @@ import subprocess
 import whisper
 import re
 from pathlib import Path
-from datetime import timedelta
 
 
 class AdvancedVideoEditor:
@@ -119,6 +118,9 @@ class AdvancedVideoEditor:
         }
     }
     
+    # TTS 配音延迟时间（毫秒）
+    TTS_DELAY_MS = 700
+
     def __init__(self, raw_dir="videos/raw", edited_dir="output",
                  assets_dir="assets", logos_dir="assets/logos", bgm_dir="assets/bgm"):
         self.raw_dir = Path(raw_dir)
@@ -189,12 +191,11 @@ class AdvancedVideoEditor:
     
     def _seconds_to_srt_time(self, seconds):
         """秒转 SRT 时间格式"""
-        td = timedelta(seconds=seconds)
-        total_seconds = int(td.total_seconds())
-        hrs = total_seconds // 3600
-        mins = (total_seconds % 3600) // 60
-        secs = total_seconds % 60
-        ms = int((seconds - int(seconds)) * 1000)
+        total_ms = max(0, round(seconds * 1000))
+        hrs = total_ms // 3600000
+        mins = (total_ms % 3600000) // 60000
+        secs = (total_ms % 60000) // 1000
+        ms = total_ms % 1000
         return f"{hrs:02d}:{mins:02d}:{secs:02d},{ms:03d}"
     
     def calculate_font_size(self, text, video_width=1080, max_font_size=12, min_font_size=10, fixed_size=None):
@@ -317,10 +318,10 @@ class AdvancedVideoEditor:
         # 垂直边距
         margin_v_map = {"top": 50, "middle": 540, "bottom": 100}
         margin_v = margin_v_map.get(position, 100)
-        
-        # 水平边距（根据对齐方式）
-        margin_l = 20 if align == "left" else 0
-        margin_r = 20 if align == "right" else 0
+
+        # 水平安全边距：9:16 竖屏视频左右留出 60px 安全区，防止字幕贴边或被设备刘海/圆角裁剪
+        margin_l = 60
+        margin_r = 60
         
         # 构建 force_style 字符串
         bold_val = -1 if bold else 0
@@ -467,6 +468,7 @@ class AdvancedVideoEditor:
         # TTS 音频选择
         use_tts = config.get("use_tts", False)
         tts_path = config.get("tts_audio_path", "")
+        tts_voice = config.get("tts_voice", "zh-CN-XiaoxiaoNeural")
         if use_tts and tts_path:
             tts_path = Path(tts_path)
             if not tts_path.exists():
@@ -492,6 +494,9 @@ class AdvancedVideoEditor:
         subtitle_position = config.get("subtitle_position", "bottom")
         subtitle_align = config.get("subtitle_align", "center")  # left/center/right
         subtitle_outline_width = config.get("subtitle_outline_width", 1)
+
+        # TTS 同步字幕
+        use_tts_subtitles = config.get("use_tts_subtitles", False)
         
         print(f"\n🎬 剪辑: {note_id}")
         print(f"   输入: {w}x{h} | {duration:.1f}s")
@@ -590,7 +595,7 @@ class AdvancedVideoEditor:
             tts_idx = input_idx
             input_idx += 1
             audio_inputs.append((tts_idx, tts_volume, "TTS配音"))
-            print(f"   TTS: {tts_path.name}")
+            print(f"   TTS: {tts_path.name} (延迟{self.TTS_DELAY_MS}ms)")
         
         # 3. BGM - 需要循环播放以匹配视频时长
         if use_bgm and bgm_path:
@@ -615,6 +620,9 @@ class AdvancedVideoEditor:
                 if name == "BGM":
                     # 使用aloop循环BGM，然后裁剪到视频时长
                     filter_chains.append(f"[{idx}:a]aloop=loop=-1:size=0,atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}[a]")
+                elif name == "TTS配音":
+                    # TTS 音频延迟 0.7 秒开始播放，先延迟再裁剪避免末尾被截断
+                    filter_chains.append(f"[{idx}:a]adelay={self.TTS_DELAY_MS}|{self.TTS_DELAY_MS},atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}[a]")
                 else:
                     filter_chains.append(f"[{idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}[a]")
             audio_out = "[a]"
@@ -631,6 +639,9 @@ class AdvancedVideoEditor:
                 elif name == "BGM":
                     # BGM循环播放并裁剪到视频时长
                     filter_chains.append(f"[{idx}:a]aloop=loop=-1:size=0,atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}{label}")
+                elif name == "TTS配音":
+                    # TTS 音频延迟 0.7 秒开始播放，先延迟再裁剪避免末尾被截断
+                    filter_chains.append(f"[{idx}:a]adelay={self.TTS_DELAY_MS}|{self.TTS_DELAY_MS},atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}{label}")
                 else:
                     # 其他音频（如TTS）裁剪到视频时长
                     filter_chains.append(f"[{idx}:a]atrim=0:{new_duration},asetpts=PTS-STARTPTS,volume={vol}{label}")
@@ -663,19 +674,38 @@ class AdvancedVideoEditor:
         
         if self.run_ffmpeg(cmd):
             # 生成并烧录字幕
-            if add_subtitles and subtitle_text:
-                print(f"\n📝 处理字幕...")
-                try:
+            srt_path = None
+            try:
+                if add_subtitles and subtitle_text:
+                    print(f"\n📝 处理手动字幕...")
                     # 如果未指定结束时间，使用视频时长
                     if subtitle_end is None:
                         subtitle_end = new_duration
-                    
-                    # 创建自定义 SRT 文件
+
                     srt_path = self.edited_dir / f"edited_{note_id}.srt"
                     srt_content = f"1\n{self._seconds_to_srt_time(subtitle_start)} --> {self._seconds_to_srt_time(subtitle_end)}\n{subtitle_text}\n"
                     srt_path.write_text(srt_content, encoding='utf-8')
                     print(f"   字幕内容: '{subtitle_text}' ({subtitle_start}s - {subtitle_end}s)")
-                    
+
+                elif use_tts and tts_path and use_tts_subtitles:
+                    print(f"\n📝 处理 TTS 同步字幕...")
+                    from tts_generator import TTSSubtitleGenerator
+                    gen = TTSSubtitleGenerator(model_size="base")
+                    # 根据 TTS 音色推断语言
+                    if tts_voice.startswith("zh-"):
+                        tts_lang = "zh"
+                    elif tts_voice.startswith("en-"):
+                        tts_lang = "en"
+                    elif tts_voice.startswith("ja-"):
+                        tts_lang = "ja"
+                    elif tts_voice.startswith("ko-"):
+                        tts_lang = "ko"
+                    else:
+                        tts_lang = "zh"
+                    print(f"   识别语言: {tts_lang} (音色: {tts_voice})")
+                    srt_path = Path(gen.generate_srt_from_tts(tts_path, language=tts_lang, delay_ms=self.TTS_DELAY_MS))
+
+                if srt_path and srt_path.exists():
                     # 样式配置
                     style_cfg = {
                         "style_preset": subtitle_style_preset,
@@ -687,11 +717,11 @@ class AdvancedVideoEditor:
                     preset = self.SUBTITLE_STYLES.get(subtitle_style_preset, self.SUBTITLE_STYLES["yellow_classic"])
                     if subtitle_outline_width != preset.get("outline_width", 1):
                         style_cfg["outline_width"] = subtitle_outline_width
-                    
+
                     # 烧录字幕到新文件
                     final_output = self.edited_dir / f"Dake_Video_Auto_{timestamp}_sub.mp4"
                     result = self.burn_subtitles(output, srt_path, final_output, style_cfg)
-                    
+
                     if result:
                         # 删除无字幕版本，重命名有字幕版本
                         output.unlink()
@@ -699,17 +729,17 @@ class AdvancedVideoEditor:
                         print(f"✅ 字幕添加完成")
                     else:
                         print(f"⚠️ 字幕烧录失败，使用无字幕版本")
-                    
+
                     # 清理 SRT 文件
                     srt_path.unlink(missing_ok=True)
-                    
-                except Exception as e:
-                    print(f"⚠️ 字幕处理失败: {e}")
-            
+
+            except Exception as e:
+                print(f"⚠️ 字幕处理失败: {e}")
+
             out_info = self.get_info(output)
             print(f"✅ 完成: {output.name} ({out_info['size_mb']:.1f}MB, {out_info['duration']:.1f}s)")
             return output
-        
+
         return None
 
 

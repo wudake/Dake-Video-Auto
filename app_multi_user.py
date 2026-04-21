@@ -133,6 +133,16 @@ def list_bgm():
                 bgms.append({"name": f.name, "size_mb": round(f.stat().st_size/1024/1024, 2)})
     return jsonify({"bgms": bgms})
 
+@app.route("/api/bgm/preview/<filename>")
+@login_required
+def preview_bgm(filename):
+    """BGM 试听"""
+    safe_filename = secure_filename(filename)
+    bgm_path = BASE_DIR / "assets" / "bgm" / safe_filename
+    if not bgm_path.exists():
+        return jsonify({"error": "文件不存在"}), 404
+    return send_from_directory(BASE_DIR / "assets" / "bgm", safe_filename)
+
 # ========== 视频下载 API (使用任务队列) ==========
 
 @app.route("/api/download", methods=["POST"])

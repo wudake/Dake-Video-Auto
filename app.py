@@ -201,6 +201,16 @@ def list_bgm():
     return jsonify({"bgms": bgms})
 
 
+@app.route("/api/bgm/preview/<filename>")
+def preview_bgm(filename):
+    """BGM 试听"""
+    safe_filename = secure_filename(filename)
+    bgm_path = BASE_DIR / "assets" / "bgm" / safe_filename
+    if not bgm_path.exists():
+        return jsonify({"error": "文件不存在"}), 404
+    return send_from_directory(BASE_DIR / "assets" / "bgm", safe_filename)
+
+
 @app.route("/api/download/edited/<filename>")
 def download_edited(filename):
     output_dir = BASE_DIR / "output"

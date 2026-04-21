@@ -137,6 +137,9 @@ class TTSGenerator:
         Returns:
             输出文件路径
         """
+        if not text or not text.strip():
+            raise ValueError("文本内容不能为空")
+
         if output_path is None:
             import hashlib
             import time
@@ -144,7 +147,7 @@ class TTSGenerator:
             text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
             timestamp = int(time.time())
             output_path = self.output_dir / f"tts_{voice.split('-')[-1]}_{timestamp}_{text_hash}.mp3"
-        
+
         try:
             return asyncio.run(self.generate_async(text, output_path, voice, rate, volume, pitch))
         except RuntimeError as e:
@@ -156,18 +159,11 @@ class TTSGenerator:
                     import concurrent.futures
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
-                            asyncio.run, 
+                            asyncio.run,
                             self.generate_async(text, output_path, voice, rate, volume, pitch)
                         )
                         return future.result()
             raise
-            import time
-            # 生成唯一文件名
-            text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
-            timestamp = int(time.time())
-            output_path = self.output_dir / f"tts_{voice.split('-')[-1]}_{timestamp}_{text_hash}.mp3"
-        
-        return asyncio.run(self.generate_async(text, output_path, voice, rate, volume, pitch))
     
     def generate_with_speed(self, text, output_path=None, voice="zh-CN-XiaoxiaoNeural", 
                            speed=1.0):
@@ -183,11 +179,11 @@ class TTSGenerator:
         Returns:
             输出文件路径
         """
-        # 转换速度倍数为 edge-tts 的 rate 格式
+        # 转换速度倍数为 edge-tts 的 rate 格式（使用 round 避免浮点精度问题，如 1-0.8=0.1999...）
         if speed > 1.0:
-            rate = f"+{int((speed - 1) * 100)}%"
+            rate = f"+{round((speed - 1) * 100)}%"
         elif speed < 1.0:
-            rate = f"-{int((1 - speed) * 100)}%"
+            rate = f"-{round((1 - speed) * 100)}%"
         else:
             rate = "+0%"
         
@@ -213,9 +209,82 @@ class TTSGenerator:
         return "zh-CN-XiaoxiaoNeural"  # 默认
 
 
+class TTSSubtitleGenerator:
+    """TTS 字幕生成器 - 基于 Whisper 将 TTS 音频转为带时间轴的字幕"""
+
+    def __init__(self, model_size="base"):
+        self.model_size = model_size
+        self._whisper_model = None
+
+    def _get_whisper_model(self):
+        """懒加载 Whisper 模型"""
+        if self._whisper_model is None:
+            import whisper
+            print(f"   加载 Whisper 模型 ({self.model_size})...")
+            self._whisper_model = whisper.load_model(self.model_size)
+        return self._whisper_model
+
+    def _seconds_to_srt_time(self, seconds):
+        """秒转 SRT 时间格式"""
+        total_ms = max(0, round(seconds * 1000))
+        hrs = total_ms // 3600000
+        mins = (total_ms % 3600000) // 60000
+        secs = (total_ms % 60000) // 1000
+        ms = total_ms % 1000
+        return f"{hrs:02d}:{mins:02d}:{secs:02d},{ms:03d}"
+
+    def generate_srt_from_tts(self, audio_path, output_srt=None, language="zh", delay_ms=0):
+        """
+        对 TTS 音频进行 Whisper 转录，生成精准时间轴 SRT 字幕
+
+        Args:
+            audio_path: TTS 音频文件路径
+            output_srt: 输出 SRT 路径，None 则自动生成
+            language: 语言代码 (zh, en, ja, ko)
+            delay_ms: 时间轴整体偏移量（毫秒），用于匹配被延迟的 TTS 音频
+
+        Returns:
+            SRT 文件路径
+        """
+        audio_path = Path(audio_path)
+        if output_srt is None:
+            output_srt = audio_path.with_suffix('.srt')
+        else:
+            output_srt = Path(output_srt)
+
+        delay_sec = delay_ms / 1000.0
+        if delay_sec > 0:
+            print(f"\n📝 生成 TTS 同步字幕: {audio_path.name} (偏移 {delay_ms}ms)")
+        else:
+            print(f"\n📝 生成 TTS 同步字幕: {audio_path.name}")
+
+        model = self._get_whisper_model()
+        result = model.transcribe(
+            str(audio_path),
+            language=language,
+            verbose=False
+        )
+
+        srt_lines = []
+        for i, segment in enumerate(result["segments"], 1):
+            start = self._seconds_to_srt_time(segment["start"] + delay_sec)
+            end = self._seconds_to_srt_time(segment["end"] + delay_sec)
+            text = segment["text"].strip()
+
+            srt_lines.append(f"{i}")
+            srt_lines.append(f"{start} --> {end}")
+            srt_lines.append(text)
+            srt_lines.append("")
+
+        output_srt.write_text("\n".join(srt_lines), encoding='utf-8')
+        print(f"   ✅ 字幕生成: {output_srt.name} ({len(result['segments'])} 句)")
+
+        return str(output_srt)
+
+
 class ScriptToSpeech:
     """脚本转语音 - 支持多段落生成"""
-    
+
     def __init__(self, tts_generator=None):
         self.tts = tts_generator or TTSGenerator()
     
