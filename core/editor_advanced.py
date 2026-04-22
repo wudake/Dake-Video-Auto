@@ -468,7 +468,7 @@ class AdvancedVideoEditor:
         # TTS 音频选择
         use_tts = config.get("use_tts", False)
         tts_path = config.get("tts_audio_path", "")
-        tts_voice = config.get("tts_voice", "zh-CN-XiaoxiaoNeural")
+        tts_voice = config.get("tts_voice", "en-US-AriaNeural")
         if use_tts and tts_path:
             tts_path = Path(tts_path)
             if not tts_path.exists():

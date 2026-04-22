@@ -11,56 +11,40 @@ import json
 class TTSGenerator:
     """TTS 语音生成器"""
     
-    # 可用音色列表
+    # 可用音色列表 - 仅英语
     VOICES = {
-        # 中文女声
-        "zh-CN-XiaoxiaoNeural": {"name": "晓晓", "gender": "女声", "desc": "活泼自然"},
-        "zh-CN-XiaoyiNeural": {"name": "晓伊", "gender": "女声", "desc": "温柔甜美"},
-        "zh-CN-liaoning-XiaobeiNeural": {"name": "晓北", "gender": "女声", "desc": "东北口音"},
-        "zh-CN-shaanxi-XiaoniNeural": {"name": "晓妮", "gender": "女声", "desc": "陕西口音"},
-        # 中文男声
-        "zh-CN-YunjianNeural": {"name": "云健", "gender": "男声", "desc": "新闻播报"},
-        "zh-CN-YunxiNeural": {"name": "云希", "gender": "男声", "desc": "年轻活力"},
-        "zh-CN-YunxiaNeural": {"name": "云霞", "gender": "男声", "desc": "童声"},
-        "zh-CN-YunyangNeural": {"name": "云扬", "gender": "男声", "desc": "成熟稳重"},
-        # 英文 - 美式英语 (en-US)
-        "en-US-AnaNeural": {"name": "Ana", "gender": "女声", "desc": "美式英语 - 年轻活泼"},
-        "en-US-AriaNeural": {"name": "Aria", "gender": "女声", "desc": "美式英语 - 专业自信"},
-        "en-US-AvaNeural": {"name": "Ava", "gender": "女声", "desc": "美式英语 - 自然优雅"},
-        "en-US-AvaMultilingualNeural": {"name": "Ava(多语言)", "gender": "女声", "desc": "美式英语 - 多语言"},
-        "en-US-EmmaNeural": {"name": "Emma", "gender": "女声", "desc": "美式英语 - 温暖友好"},
-        "en-US-EmmaMultilingualNeural": {"name": "Emma(多语言)", "gender": "女声", "desc": "美式英语 - 多语言"},
-        "en-US-JennyNeural": {"name": "Jenny", "gender": "女声", "desc": "美式英语 - 清晰友好"},
-        "en-US-MichelleNeural": {"name": "Michelle", "gender": "女声", "desc": "美式英语 - 温暖亲切"},
-        "en-US-AndrewNeural": {"name": "Andrew", "gender": "男声", "desc": "美式英语 - 稳重专业"},
-        "en-US-AndrewMultilingualNeural": {"name": "Andrew(多语言)", "gender": "男声", "desc": "美式英语 - 多语言"},
-        "en-US-BrianNeural": {"name": "Brian", "gender": "男声", "desc": "美式英语 - 清晰有力"},
-        "en-US-BrianMultilingualNeural": {"name": "Brian(多语言)", "gender": "男声", "desc": "美式英语 - 多语言"},
-        "en-US-ChristopherNeural": {"name": "Christopher", "gender": "男声", "desc": "美式英语 - 权威自信"},
-        "en-US-EricNeural": {"name": "Eric", "gender": "男声", "desc": "美式英语 - 年轻活力"},
-        "en-US-GuyNeural": {"name": "Guy", "gender": "男声", "desc": "美式英语 - 专业稳重"},
-        "en-US-RogerNeural": {"name": "Roger", "gender": "男声", "desc": "美式英语 - 成熟深沉"},
-        "en-US-SteffanNeural": {"name": "Steffan", "gender": "男声", "desc": "美式英语 - 温暖可靠"},
+        # 美式英语 - 女声
+        "en-US-AnaNeural": {"name": "Ana", "gender": "Female", "desc": "Young & Cheerful"},
+        "en-US-AriaNeural": {"name": "Aria", "gender": "Female", "desc": "Professional & Confident"},
+        "en-US-AvaNeural": {"name": "Ava", "gender": "Female", "desc": "Natural & Elegant"},
+        "en-US-AvaMultilingualNeural": {"name": "Ava (Multilingual)", "gender": "Female", "desc": "Multilingual"},
+        "en-US-EmmaNeural": {"name": "Emma", "gender": "Female", "desc": "Warm & Friendly"},
+        "en-US-EmmaMultilingualNeural": {"name": "Emma (Multilingual)", "gender": "Female", "desc": "Multilingual"},
+        "en-US-JennyNeural": {"name": "Jenny", "gender": "Female", "desc": "Clear & Friendly"},
+        "en-US-MichelleNeural": {"name": "Michelle", "gender": "Female", "desc": "Warm & Pleasant"},
+        # 美式英语 - 男声
+        "en-US-AndrewNeural": {"name": "Andrew", "gender": "Male", "desc": "Steady & Professional"},
+        "en-US-AndrewMultilingualNeural": {"name": "Andrew (Multilingual)", "gender": "Male", "desc": "Multilingual"},
+        "en-US-BrianNeural": {"name": "Brian", "gender": "Male", "desc": "Clear & Powerful"},
+        "en-US-BrianMultilingualNeural": {"name": "Brian (Multilingual)", "gender": "Male", "desc": "Multilingual"},
+        "en-US-ChristopherNeural": {"name": "Christopher", "gender": "Male", "desc": "Authoritative & Confident"},
+        "en-US-EricNeural": {"name": "Eric", "gender": "Male", "desc": "Young & Energetic"},
+        "en-US-GuyNeural": {"name": "Guy", "gender": "Male", "desc": "Professional & Steady"},
+        "en-US-RogerNeural": {"name": "Roger", "gender": "Male", "desc": "Deep & Mature"},
+        "en-US-SteffanNeural": {"name": "Steffan", "gender": "Male", "desc": "Warm & Reliable"},
         # 英式英语
-        "en-GB-LibbyNeural": {"name": "Libby", "gender": "女声", "desc": "英式英语 - 优雅专业"},
-        "en-GB-MaisieNeural": {"name": "Maisie", "gender": "女声", "desc": "英式英语 - 活泼年轻"},
-        "en-GB-SoniaNeural": {"name": "Sonia", "gender": "女声", "desc": "英式英语 - 友好清晰"},
-        "en-GB-RyanNeural": {"name": "Ryan", "gender": "男声", "desc": "英式英语 - 稳重自然"},
-        "en-GB-ThomasNeural": {"name": "Thomas", "gender": "男声", "desc": "英式英语 - 成熟稳重"},
-        # 日语
-        "ja-JP-KeitaNeural": {"name": "Keita", "gender": "男声", "desc": "日语"},
-        "ja-JP-NanamiNeural": {"name": "七海", "gender": "女声", "desc": "日语"},
-        # 韩语
-        "ko-KR-HyunsuMultilingualNeural": {"name": "贤秀(多语言)", "gender": "男声", "desc": "韩语 - 多语言"},
-        "ko-KR-InJoonNeural": {"name": "仁俊", "gender": "男声", "desc": "韩语"},
-        "ko-KR-SunHiNeural": {"name": "善熙", "gender": "女声", "desc": "韩语"},
+        "en-GB-LibbyNeural": {"name": "Libby", "gender": "Female", "desc": "Elegant & Professional"},
+        "en-GB-MaisieNeural": {"name": "Maisie", "gender": "Female", "desc": "Lively & Young"},
+        "en-GB-SoniaNeural": {"name": "Sonia", "gender": "Female", "desc": "Friendly & Clear"},
+        "en-GB-RyanNeural": {"name": "Ryan", "gender": "Male", "desc": "Steady & Natural"},
+        "en-GB-ThomasNeural": {"name": "Thomas", "gender": "Male", "desc": "Mature & Steady"},
     }
     
     def __init__(self, output_dir="assets/tts"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
-    async def generate_async(self, text, output_path, voice="zh-CN-XiaoxiaoNeural", 
+    async def generate_async(self, text, output_path, voice="en-US-AriaNeural", 
                              rate="+0%", volume="+0%", pitch="+0Hz"):
         """
         异步生成语音
@@ -121,7 +105,7 @@ class TTSGenerator:
                     pass
             raise
     
-    def generate(self, text, output_path=None, voice="zh-CN-XiaoxiaoNeural",
+    def generate(self, text, output_path=None, voice="en-US-AriaNeural",
                  rate="+0%", volume="+0%", pitch="+0Hz"):
         """
         同步生成语音（阻塞方式）
@@ -165,7 +149,7 @@ class TTSGenerator:
                         return future.result()
             raise
     
-    def generate_with_speed(self, text, output_path=None, voice="zh-CN-XiaoxiaoNeural", 
+    def generate_with_speed(self, text, output_path=None, voice="en-US-AriaNeural", 
                            speed=1.0):
         """
         使用速度倍数生成语音
@@ -206,7 +190,7 @@ class TTSGenerator:
         for voice_id, info in self.VOICES.items():
             if info["name"] == name:
                 return voice_id
-        return "zh-CN-XiaoxiaoNeural"  # 默认
+        return "en-US-AriaNeural"  # 默认
 
 
 class TTSSubtitleGenerator:
@@ -317,7 +301,7 @@ class ScriptToSpeech:
                 if not text:
                     continue
                 
-                voice = seg.get("voice", "zh-CN-XiaoxiaoNeural")
+                voice = seg.get("voice", "en-US-AriaNeural")
                 speed = seg.get("speed", 1.0)
                 
                 temp_file = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
@@ -394,7 +378,7 @@ class ScriptToSpeech:
 
 
 # 快捷函数
-def generate_speech(text, output_path=None, voice="晓晓", speed=1.0):
+def generate_speech(text, output_path=None, voice="Aria", speed=1.0):
     """
     快速生成语音
     
@@ -418,6 +402,6 @@ if __name__ == "__main__":
         print(f"  - {v['name']} ({v['gender']}): {v['desc']}")
     
     # 生成测试语音
-    test_text = "大家好，我是Dake的AI助手，很高兴为大家服务！"
-    output = tts.generate_with_speed(test_text, voice="zh-CN-XiaoxiaoNeural", speed=1.0)
+    test_text = "Hello, I am Dake's AI assistant, glad to be of service!"
+    output = tts.generate_with_speed(test_text, voice="en-US-AriaNeural", speed=1.0)
     print(f"\n✅ 测试语音生成: {output}")

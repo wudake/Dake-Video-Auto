@@ -59,7 +59,7 @@ class TestTTSGeneratorErrors(unittest.TestCase):
         """验证音色列表返回完整"""
         tts = TTSGenerator()
         voices = tts.get_voices_list()
-        self.assertGreaterEqual(len(voices), 30)
+        self.assertEqual(len(voices), 22)
         # 验证结构
         for v in voices:
             self.assertIn("id", v)
@@ -71,12 +71,12 @@ class TestTTSGeneratorErrors(unittest.TestCase):
         """根据名称查找音色ID"""
         tts = TTSGenerator()
         self.assertEqual(
-            tts.get_voice_by_name("晓晓"),
-            "zh-CN-XiaoxiaoNeural"
+            tts.get_voice_by_name("Aria"),
+            "en-US-AriaNeural"
         )
         self.assertEqual(
-            tts.get_voice_by_name("不存在的名字"),
-            "zh-CN-XiaoxiaoNeural"  # 默认回退
+            tts.get_voice_by_name("NonExistent"),
+            "en-US-AriaNeural"  # 默认回退
         )
 
 
@@ -515,14 +515,14 @@ class TestIntegrationRealTTSSpeedSync(unittest.TestCase):
 
     def test_speed_1_0_subtitle_sync(self):
         """正常语速字幕同步"""
-        text = "大家好，今天我们来测试视频自动化工具的字幕同步功能。"
+        text = "Hello everyone, today we are testing subtitle sync functionality."
         tts_path = self.tts.generate_with_speed(
-            text, voice="zh-CN-XiaoxiaoNeural", speed=1.0
+            text, voice="en-US-AriaNeural", speed=1.0
         )
         self.assertTrue(Path(tts_path).exists())
 
         gen = TTSSubtitleGenerator(model_size="base")
-        srt_path = gen.generate_srt_from_tts(tts_path, language="zh", delay_ms=0)
+        srt_path = gen.generate_srt_from_tts(tts_path, language="en", delay_ms=0)
 
         content = Path(srt_path).read_text(encoding="utf-8")
         self.assertIn(" --> ", content)
@@ -542,14 +542,14 @@ class TestIntegrationRealTTSSpeedSync(unittest.TestCase):
 
     def test_speed_1_5_subtitle_sync(self):
         """1.5倍语速字幕同步"""
-        text = "加速测试，语速提高百分之五十。"
+        text = "Speed up test, speaking fifty percent faster."
         tts_path = self.tts.generate_with_speed(
-            text, voice="zh-CN-XiaoxiaoNeural", speed=1.5
+            text, voice="en-US-AriaNeural", speed=1.5
         )
         self.assertTrue(Path(tts_path).exists())
 
         gen = TTSSubtitleGenerator(model_size="base")
-        srt_path = gen.generate_srt_from_tts(tts_path, language="zh", delay_ms=0)
+        srt_path = gen.generate_srt_from_tts(tts_path, language="en", delay_ms=0)
 
         content = Path(srt_path).read_text(encoding="utf-8")
         self.assertIn(" --> ", content)
@@ -558,14 +558,14 @@ class TestIntegrationRealTTSSpeedSync(unittest.TestCase):
 
     def test_speed_0_8_subtitle_sync(self):
         """0.8倍语速字幕同步"""
-        text = "慢速测试，语速降低百分之二十。"
+        text = "Slow down test, speaking twenty percent slower."
         tts_path = self.tts.generate_with_speed(
-            text, voice="zh-CN-XiaoxiaoNeural", speed=0.8
+            text, voice="en-US-AriaNeural", speed=0.8
         )
         self.assertTrue(Path(tts_path).exists())
 
         gen = TTSSubtitleGenerator(model_size="base")
-        srt_path = gen.generate_srt_from_tts(tts_path, language="zh", delay_ms=0)
+        srt_path = gen.generate_srt_from_tts(tts_path, language="en", delay_ms=0)
 
         content = Path(srt_path).read_text(encoding="utf-8")
         self.assertIn(" --> ", content)
@@ -588,9 +588,9 @@ class TestIntegrationTTSWithDelayAccuracy(unittest.TestCase):
 
     def test_delay_700ms_exact_offset(self):
         """验证 700ms 延迟精确偏移"""
-        text = "延迟测试开始，验证字幕时间轴偏移。"
+        text = "Delay test begins, verifying subtitle timeline offset."
         tts_path = self.tts.generate_with_speed(
-            text, voice="zh-CN-XiaoxiaoNeural", speed=1.0
+            text, voice="en-US-AriaNeural", speed=1.0
         )
 
         gen = TTSSubtitleGenerator(model_size="base")

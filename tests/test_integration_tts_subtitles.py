@@ -72,9 +72,9 @@ class TestTTSSubtitleIntegration(unittest.TestCase):
         """步骤1：真实 TTS 语音生成"""
         tts = TTSGenerator(output_dir=str(self.tts_dir))
         self.tts_path = tts.generate_with_speed(
-            text="大家好，这是 Dake 视频自动化工具的全流程测试。",
+            text="Hello everyone, this is the Dake video automation tool integration test.",
             output_path=str(self.tts_dir / "integration_tts.mp3"),
-            voice="zh-CN-XiaoxiaoNeural",
+            voice="en-US-AriaNeural",
             speed=1.0
         )
         self.assertTrue(Path(self.tts_path).exists())
@@ -91,7 +91,7 @@ class TestTTSSubtitleIntegration(unittest.TestCase):
         gen = TTSSubtitleGenerator(model_size="base")
         srt_path = gen.generate_srt_from_tts(
             str(tts_path),
-            language="zh",
+            language="en",
             delay_ms=700
         )
 

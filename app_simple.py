@@ -260,7 +260,7 @@ def generate_tts():
     """生成 TTS 语音"""
     data = request.json
     text = data.get("text", "").strip()
-    voice = data.get("voice", "zh-CN-XiaoxiaoNeural")
+    voice = data.get("voice", "en-US-AriaNeural")
     speed = data.get("speed", 1.0)
     
     if not text:
