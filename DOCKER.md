@@ -18,8 +18,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/wudake/Openclaw-Video-Auto.git
-cd Openclaw-Video-Auto
+git clone https://github.com/wudake/Dake-Video-Auto.git
+cd Dake-Video-Auto
 ```
 
 ### 2. 启动服务
@@ -364,8 +364,8 @@ sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker
 sudo chmod +x /usr/local/bin/docker-compose
 
 # 4. 部署
-git clone https://github.com/wudake/Openclaw-Video-Auto.git
-cd Openclaw-Video-Auto
+git clone https://github.com/wudake/Dake-Video-Auto.git
+cd Dake-Video-Auto
 docker-compose up -d
 
 # 5. 配置安全组，开放 5000 端口
@@ -391,8 +391,8 @@ sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-c
 sudo chmod +x /usr/local/bin/docker-compose
 
 # 部署
-git clone https://github.com/wudake/Openclaw-Video-Auto.git
-cd Openclaw-Video-Auto
+git clone https://github.com/wudake/Dake-Video-Auto.git
+cd Dake-Video-Auto
 docker-compose up -d
 ```
 

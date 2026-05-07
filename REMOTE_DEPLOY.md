@@ -46,8 +46,8 @@ sudo yum install -y nss atk at-spi2-atk libXcomposite libXdamage \
 
 ```bash
 cd /opt  # 或你想部署的目录
-sudo git clone https://github.com/wudake/Openclaw-Video-Auto.git
-cd Openclaw-Video-Auto
+sudo git clone https://github.com/wudake/Dake-Video-Auto.git
+cd Dake-Video-Auto
 sudo chown -R $USER:$USER .
 ```
 
@@ -103,10 +103,10 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/Openclaw-Video-Auto
-Environment="PATH=/opt/Openclaw-Video-Auto/venv/bin:/usr/local/bin:/usr/bin:/bin"
+WorkingDirectory=/opt/Dake-Video-Auto
+Environment="PATH=/opt/Dake-Video-Auto/venv/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/opt/Openclaw-Video-Auto/venv/bin/python /opt/Openclaw-Video-Auto/app_simple.py
+ExecStart=/opt/Dake-Video-Auto/venv/bin/python /opt/Dake-Video-Auto/app_simple.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -170,7 +170,7 @@ server {
 
     # 静态文件缓存
     location /static {
-        alias /opt/Openclaw-Video-Auto/static;
+        alias /opt/Dake-Video-Auto/static;
         expires 1d;
     }
 }
@@ -252,7 +252,7 @@ custom_domains = dake-video.your-domain.com
 ## 📁 目录结构
 
 ```
-/opt/Openclaw-Video-Auto/
+/opt/Dake-Video-Auto/
 ├── venv/                  # Python 虚拟环境
 ├── app_simple.py          # 主应用
 ├── core/                  # 核心模块
@@ -341,7 +341,7 @@ sudo kill -9 <PID>
 chmod -R 755 output videos assets logs static
 
 # 更改所有者
-sudo chown -R $USER:$USER /opt/Openclaw-Video-Auto
+sudo chown -R $USER:$USER /opt/Dake-Video-Auto
 ```
 
 ### 5. 内存不足导致剪辑失败
@@ -366,7 +366,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ## 🔄 更新项目
 
 ```bash
-cd /opt/Openclaw-Video-Auto
+cd /opt/Dake-Video-Auto
 sudo systemctl stop dake-video
 git pull origin main
 source venv/bin/activate
@@ -387,7 +387,7 @@ sudo systemctl daemon-reload
 
 # 删除项目
 cd /opt
-sudo rm -rf Openclaw-Video-Auto
+sudo rm -rf Dake-Video-Auto
 
 # 如果使用 Nginx
 sudo rm /etc/nginx/sites-enabled/dake-video
@@ -398,5 +398,5 @@ sudo systemctl restart nginx
 
 ## 📞 支持与反馈
 
-- GitHub Issues: https://github.com/wudake/Openclaw-Video-Auto/issues
+- GitHub Issues: https://github.com/wudake/Dake-Video-Auto/issues
 - 版本: v4.6.0

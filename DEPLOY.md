@@ -120,8 +120,8 @@ cd ~/apps
 
 ```bash
 # 克隆项目
-git clone https://github.com/wudake/Openclaw-Video-Auto.git
-cd Openclaw-Video-Auto
+git clone https://github.com/wudake/Dake-Video-Auto.git
+cd Dake-Video-Auto
 
 # 切换到最新版本
 git checkout v5.0.0
@@ -138,7 +138,7 @@ source venv/bin/activate
 
 # 验证 Python 路径
 which python
-# 应该输出: /home/videoauto/apps/Openclaw-Video-Auto/venv/bin/python
+# 应该输出: /home/videoauto/apps/Dake-Video-Auto/venv/bin/python
 ```
 
 ### 3.4 安装依赖
@@ -213,9 +213,9 @@ After=network.target
 Type=simple
 User=videoauto
 Group=videoauto
-WorkingDirectory=/home/videoauto/apps/Openclaw-Video-Auto
-Environment=PATH=/home/videoauto/apps/Openclaw-Video-Auto/venv/bin
-ExecStart=/home/videoauto/apps/Openclaw-Video-Auto/venv/bin/python app_simple.py
+WorkingDirectory=/home/videoauto/apps/Dake-Video-Auto
+Environment=PATH=/home/videoauto/apps/Dake-Video-Auto/venv/bin
+ExecStart=/home/videoauto/apps/Dake-Video-Auto/venv/bin/python app_simple.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -311,7 +311,7 @@ server {
     }
 
     location /static {
-        alias /home/videoauto/apps/Openclaw-Video-Auto/static;
+        alias /home/videoauto/apps/Dake-Video-Auto/static;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
@@ -383,17 +383,17 @@ sudo firewall-cmd --list-all
 
 ```bash
 # 确保目录权限正确
-sudo chown -R videoauto:videoauto /home/videoauto/apps/Openclaw-Video-Auto
+sudo chown -R videoauto:videoauto /home/videoauto/apps/Dake-Video-Auto
 
 # 创建必要的目录
-mkdir -p ~/apps/Openclaw-Video-Auto/{videos/raw,output,assets/{logos,bgm,tts},static,logs,config}
+mkdir -p ~/apps/Dake-Video-Auto/{videos/raw,output,assets/{logos,bgm,tts},static,logs,config}
 
 # 设置权限
-chmod 755 ~/apps/Openclaw-Video-Auto
-chmod 777 ~/apps/Openclaw-Video-Auto/output
-chmod 777 ~/apps/Openclaw-Video-Auto/videos/raw
-chmod 777 ~/apps/Openclaw-Video-Auto/static
-chmod 777 ~/apps/Openclaw-Video-Auto/logs
+chmod 755 ~/apps/Dake-Video-Auto
+chmod 777 ~/apps/Dake-Video-Auto/output
+chmod 777 ~/apps/Dake-Video-Auto/videos/raw
+chmod 777 ~/apps/Dake-Video-Auto/static
+chmod 777 ~/apps/Dake-Video-Auto/logs
 ```
 
 ---
@@ -402,7 +402,7 @@ chmod 777 ~/apps/Openclaw-Video-Auto/logs
 
 ```bash
 # 进入项目目录
-cd ~/apps/Openclaw-Video-Auto
+cd ~/apps/Dake-Video-Auto
 
 # 拉取最新代码
 git pull origin main
@@ -434,7 +434,7 @@ sudo netstat -tlnp | grep 5000
 sudo ss -tlnp | grep 5000
 
 # 检查权限
-ls -la ~/apps/Openclaw-Video-Auto/
+ls -la ~/apps/Dake-Video-Auto/
 ```
 
 ### 问题2: FFmpeg 未找到
@@ -478,7 +478,7 @@ sudo ufw disable
 df -h
 
 # 查看大文件
-du -sh ~/apps/Openclaw-Video-Auto/*
+du -sh ~/apps/Dake-Video-Auto/*
 
 # 清理日志
 sudo journalctl --vacuum-time=7d
@@ -509,7 +509,7 @@ ps aux | grep python
 ```bash
 # 创建日志轮转配置
 sudo tee /etc/logrotate.d/videoauto > /dev/null <<EOF
-/home/videoauto/apps/Openclaw-Video-Auto/logs/*.log {
+/home/videoauto/apps/Dake-Video-Auto/logs/*.log {
     daily
     rotate 7
     compress
@@ -538,7 +538,7 @@ tar czf $BACKUP_DIR/videoauto_$DATE.tar.gz \
   --exclude='venv' \
   --exclude='__pycache__' \
   --exclude='*.mp4' \
-  ~/apps/Openclaw-Video-Auto/
+  ~/apps/Dake-Video-Auto/
 
 # 保留最近7天备份
 find $BACKUP_DIR -name "videoauto_*.tar.gz" -mtime +7 -delete
@@ -592,8 +592,8 @@ https://your-domain.com
 
 如有部署问题，请检查：
 1. 服务器日志：`sudo journalctl -u videoauto -f`
-2. 应用日志：`~/apps/Openclaw-Video-Auto/logs/`
-3. GitHub Issues: https://github.com/wudake/Openclaw-Video-Auto/issues
+2. 应用日志：`~/apps/Dake-Video-Auto/logs/`
+3. GitHub Issues: https://github.com/wudake/Dake-Video-Auto/issues
 
 ---
 
