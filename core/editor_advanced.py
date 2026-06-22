@@ -283,8 +283,8 @@ class AdvancedVideoEditor:
         if has_audio:
             filter_complex = (
                 f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
-                f"format=yuv420p,fps=30,trim=duration={actual_duration}[cover];"
-                f"[1:v]format=yuv420p,fps=30[mainv];"
+                f"format=yuv420p,fps=30,setsar=1:1,trim=duration={actual_duration}[cover];"
+                f"[1:v]format=yuv420p,fps=30,setsar=1:1[mainv];"
                 f"[cover][mainv]concat=n=2:v=1:a=0[video];"
                 f"[1:a]aformat=fltp:48000:stereo[audio]"
             )
@@ -292,8 +292,8 @@ class AdvancedVideoEditor:
         else:
             filter_complex = (
                 f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
-                f"format=yuv420p,fps=30,trim=duration={actual_duration}[cover];"
-                f"[1:v]format=yuv420p,fps=30[mainv];"
+                f"format=yuv420p,fps=30,setsar=1:1,trim=duration={actual_duration}[cover];"
+                f"[1:v]format=yuv420p,fps=30,setsar=1:1[mainv];"
                 f"[cover][mainv]concat=n=2:v=1:a=0[video]"
             )
             maps = ["-map", "[video]"]
