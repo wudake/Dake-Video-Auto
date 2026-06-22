@@ -315,9 +315,21 @@ class AdvancedVideoEditor:
         font_color_ass = hex_to_ass(font_color)
         outline_color_ass = hex_to_ass(outline_color)
         
-        # 垂直边距
-        margin_v_map = {"top": 50, "middle": 540, "bottom": 100}
-        margin_v = margin_v_map.get(position, 100)
+        # 垂直边距：底部默认放在视频高度的 20% 处（即距离底部 20% 屏幕高度）。
+        # ffmpeg 的 subtitles 滤镜内部按 ASS 默认脚本分辨率（高度约 288）解析 MarginV，
+        # 因此需要把目标视频像素边距换算成脚本单位，避免大值把字幕推出屏幕。
+        video_info = self.get_info(video_path)
+        video_height = video_info.get("height", 1920) or 1920
+        ass_script_height = 288  # ffmpeg SRT->ASS 默认脚本高度
+        target_bottom_margin_px = int(video_height * 0.20)  # 距离底部 20% 视频高度
+        bottom_margin_ass = int(target_bottom_margin_px * ass_script_height / video_height)
+
+        margin_v_map = {
+            "top": 50,
+            "middle": 540,
+            "bottom": bottom_margin_ass
+        }
+        margin_v = margin_v_map.get(position, bottom_margin_ass)
 
         # 水平安全边距：9:16 竖屏视频左右留出 60px 安全区，防止字幕贴边或被设备刘海/圆角裁剪
         margin_l = 60
