@@ -410,6 +410,68 @@ class TestCoverFrame(unittest.TestCase):
         self.assertAlmostEqual(info["duration"], 4.5, delta=0.2)
 
 
+class TestCoverUploadAPI(unittest.TestCase):
+    """封面上传 API 测试"""
+
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp(prefix="cover_upload_test_"))
+        # 导入 Flask 应用
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        import app_simple as app_module
+        self.app = app_module.app
+        self.app.config["TESTING"] = True
+        self.client = self.app.test_client()
+
+        # 创建测试封面图
+        self.cover_path = self.temp_dir / "test_cover.jpg"
+        subprocess.run([
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", "color=c=orange:s=1080x1920:d=1",
+            "-frames:v", "1", str(self.cover_path)
+        ], check=True, capture_output=True)
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_upload_cover_success(self):
+        """上传合法封面图应成功"""
+        with open(self.cover_path, "rb") as f:
+            response = self.client.post(
+                "/api/upload/cover",
+                data={"file": (f, "test_cover.jpg")},
+                content_type="multipart/form-data"
+            )
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertIn("filename", data["data"])
+        self.assertIn("path", data["data"])
+        self.assertTrue(Path(data["data"]["path"]).exists())
+
+    def test_upload_cover_invalid_format(self):
+        """上传非图片文件应失败"""
+        fake_file = self.temp_dir / "test.txt"
+        fake_file.write_text("not an image")
+        with open(fake_file, "rb") as f:
+            response = self.client.post(
+                "/api/upload/cover",
+                data={"file": (f, "test.txt")},
+                content_type="multipart/form-data"
+            )
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertFalse(data["success"])
+        self.assertIn("PNG/JPG", data["error"])
+
+    def test_upload_cover_no_file(self):
+        """未上传文件应失败"""
+        response = self.client.post("/api/upload/cover")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertFalse(data["success"])
+        self.assertIn("没有文件", data["error"])
+
+
 if __name__ == "__main__":
     import json
     unittest.main(verbosity=2)
