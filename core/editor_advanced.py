@@ -198,6 +198,132 @@ class AdvancedVideoEditor:
         ms = total_ms % 1000
         return f"{hrs:02d}:{mins:02d}:{secs:02d},{ms:03d}"
     
+    def _srt_time_to_seconds(self, srt_time):
+        """SRT 时间格式转秒"""
+        match = re.match(r"(\d{2}):(\d{2}):(\d{2}),(\d{3})", srt_time)
+        if not match:
+            return 0.0
+        hrs, mins, secs, ms = map(int, match.groups())
+        return hrs * 3600 + mins * 60 + secs + ms / 1000.0
+    
+    def shift_srt_timestamps(self, srt_path, offset_seconds):
+        """
+        将 SRT 字幕文件的所有时间戳整体后移
+        
+        Args:
+            srt_path: SRT 文件路径
+            offset_seconds: 后移秒数（通常为封面时长）
+        """
+        srt_path = Path(srt_path)
+        if not srt_path.exists() or offset_seconds <= 0:
+            return
+        
+        content = srt_path.read_text(encoding='utf-8')
+        time_pattern = re.compile(r"(\d{2}:\d{2}:\d{2},\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2},\d{3})")
+        
+        def shift_match(match):
+            start = self._srt_time_to_seconds(match.group(1)) + offset_seconds
+            end = self._srt_time_to_seconds(match.group(2)) + offset_seconds
+            return f"{self._seconds_to_srt_time(start)} --> {self._seconds_to_srt_time(end)}"
+        
+        shifted_content = time_pattern.sub(shift_match, content)
+        srt_path.write_text(shifted_content, encoding='utf-8')
+        print(f"   字幕时间已后移 {offset_seconds:.2f}s")
+    
+    def insert_cover(self, main_video_path, cover_path, cover_duration, output_path):
+        """
+        在视频开头插入封面
+        
+        Args:
+            main_video_path: 主视频路径
+            cover_path: 封面图片路径
+            cover_duration: 封面持续秒数
+            output_path: 输出路径
+            
+        Returns:
+            输出路径或 None
+        """
+        main_video_path = Path(main_video_path)
+        cover_path = Path(cover_path)
+        output_path = Path(output_path)
+        
+        if not main_video_path.exists():
+            print(f"❌ 主视频不存在: {main_video_path}")
+            return None
+        if not cover_path.exists():
+            print(f"⚠️ 封面文件不存在，跳过封面插入: {cover_path}")
+            return None
+        
+        main_info = self.get_info(main_video_path)
+        main_duration = main_info.get("duration", 0)
+        if main_duration <= 0:
+            print(f"❌ 主视频时长无效")
+            return None
+        
+        # 封面时长不能超过主视频时长
+        actual_duration = min(float(cover_duration), main_duration)
+        if actual_duration <= 0:
+            print(f"⚠️ 封面时长无效，跳过封面插入")
+            return None
+        
+        print(f"\n🖼️  插入封面: {cover_path.name} ({actual_duration:.2f}s)")
+        
+        # 检测主视频是否包含音频流
+        has_audio = False
+        try:
+            probe = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "a",
+                 "-show_entries", "stream=index", "-of", "csv=p=0", str(main_video_path)],
+                capture_output=True, text=True
+            )
+            has_audio = bool(probe.stdout.strip())
+        except Exception:
+            has_audio = False
+        
+        if has_audio:
+            filter_complex = (
+                f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+                f"format=yuv420p,fps=30,trim=duration={actual_duration}[cover];"
+                f"[1:v]format=yuv420p,fps=30[mainv];"
+                f"[cover][mainv]concat=n=2:v=1:a=0[video];"
+                f"[1:a]aformat=fltp:48000:stereo[audio]"
+            )
+            maps = ["-map", "[video]", "-map", "[audio]"]
+        else:
+            filter_complex = (
+                f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+                f"format=yuv420p,fps=30,trim=duration={actual_duration}[cover];"
+                f"[1:v]format=yuv420p,fps=30[mainv];"
+                f"[cover][mainv]concat=n=2:v=1:a=0[video]"
+            )
+            maps = ["-map", "[video]"]
+        
+        cmd = [
+            "ffmpeg", "-y",
+            "-loop", "1", "-i", str(cover_path),
+            "-i", str(main_video_path),
+            "-filter_complex", filter_complex,
+            *maps,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "23",
+            "-r", "30",
+            "-movflags", "+faststart",
+            str(output_path)
+        ]
+        
+        if has_audio:
+            cmd.extend(["-c:a", "aac", "-b:a", "128k"])
+        else:
+            cmd.append("-an")
+        
+        if self.run_ffmpeg(cmd):
+            print(f"   ✅ 封面插入完成: {output_path.name}")
+            return output_path
+        else:
+            print(f"⚠️ 封面插入失败")
+            return None
+    
     def calculate_font_size(self, text, video_width=1080, max_font_size=12, min_font_size=10, fixed_size=None):
         """
         根据字幕长度计算自适应字体大小
@@ -510,6 +636,20 @@ class AdvancedVideoEditor:
         # TTS 同步字幕
         use_tts_subtitles = config.get("use_tts_subtitles", False)
         
+        # 封面配置
+        add_cover = config.get("add_cover", False)
+        cover_path = config.get("cover_path", "")
+        cover_duration = float(config.get("cover_duration", 0.5))
+        if add_cover and cover_path:
+            cover_path = Path(cover_path)
+            if not cover_path.exists():
+                print(f"⚠️ 封面文件不存在，禁用封面: {cover_path}")
+                add_cover = False
+                cover_path = None
+        else:
+            add_cover = False
+            cover_path = None
+        
         print(f"\n🎬 剪辑: {note_id}")
         print(f"   输入: {w}x{h} | {duration:.1f}s")
         if crop_start > 0 or crop_end > 0:
@@ -685,7 +825,7 @@ class AdvancedVideoEditor:
         ])
         
         if self.run_ffmpeg(cmd):
-            # 生成并烧录字幕
+            # 生成字幕文件（先不烧录）
             srt_path = None
             try:
                 if add_subtitles and subtitle_text:
@@ -717,7 +857,32 @@ class AdvancedVideoEditor:
                     print(f"   识别语言: {tts_lang} (音色: {tts_voice})")
                     srt_path = Path(gen.generate_srt_from_tts(tts_path, language=tts_lang, delay_ms=self.TTS_DELAY_MS))
 
-                if srt_path and srt_path.exists():
+            except Exception as e:
+                print(f"⚠️ 字幕处理失败: {e}")
+                srt_path = None
+
+            # 插入封面（在烧录字幕之前，确保字幕不会叠在封面上）
+            cover_inserted = False
+            if add_cover and cover_path and cover_path.exists():
+                cover_output = self.edited_dir / f"Dake_Video_Auto_{timestamp}_cover.mp4"
+                cover_result = self.insert_cover(output, cover_path, cover_duration, cover_output)
+                if cover_result:
+                    output.unlink()
+                    cover_output.rename(output)
+                    cover_inserted = True
+                    print(f"✅ 封面插入完成")
+                else:
+                    print(f"⚠️ 封面插入失败，使用无封面版本")
+                    # 清理失败的临时文件
+                    cover_output.unlink(missing_ok=True)
+
+            # 烧录字幕
+            if srt_path and srt_path.exists():
+                try:
+                    # 如果封面插入成功，将字幕时间整体后移封面时长
+                    if cover_inserted and cover_duration > 0:
+                        self.shift_srt_timestamps(srt_path, cover_duration)
+
                     # 样式配置
                     style_cfg = {
                         "style_preset": subtitle_style_preset,
@@ -742,11 +907,11 @@ class AdvancedVideoEditor:
                     else:
                         print(f"⚠️ 字幕烧录失败，使用无字幕版本")
 
+                except Exception as e:
+                    print(f"⚠️ 字幕烧录异常: {e}")
+                finally:
                     # 清理 SRT 文件
                     srt_path.unlink(missing_ok=True)
-
-            except Exception as e:
-                print(f"⚠️ 字幕处理失败: {e}")
 
             out_info = self.get_info(output)
             print(f"✅ 完成: {output.name} ({out_info['size_mb']:.1f}MB, {out_info['duration']:.1f}s)")

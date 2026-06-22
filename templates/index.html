@@ -1041,6 +1041,37 @@
                 </div>
             </div>
 
+            <!-- 封面设置 -->
+            <div class="options-grid">
+                <label class="option-item">
+                    <input type="checkbox" id="opt-cover">
+                    <span>添加封面</span>
+                </label>
+            </div>
+            
+            <div id="cover-config-panel" style="display: none; padding: 20px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; margin-bottom: 20px;">
+                <div class="input-group">
+                    <label>封面图片</label>
+                    <input type="file" id="cover-file" accept="image/png,image/jpeg" style="display: none;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-secondary" type="button" onclick="document.getElementById('cover-file').click()" style="padding: 10px 16px; font-size: 14px;">
+                            📁 选择封面
+                        </button>
+                        <span id="cover-filename" style="color: var(--text-muted); font-size: 14px;">未选择文件</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">建议尺寸 1080×1920，支持 PNG/JPG</p>
+                </div>
+                
+                <div class="input-group">
+                    <label>封面时长（秒）</label>
+                    <input type="number" id="cover-duration" class="select-box" value="0.5" min="0.1" max="5.0" step="0.1" style="width: 100%;">
+                </div>
+                
+                <div id="cover-preview-container" style="margin-top: 10px; display: none;">
+                    <img id="cover-preview" src="" alt="封面预览" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid var(--border);">
+                </div>
+            </div>
+
             <button class="btn btn-primary" id="btn-edit" onclick="editVideo()">
                 <span>✨ 开始剪辑</span>
             </button>
@@ -1250,6 +1281,45 @@
             }
         });
 
+        // 封面面板显示控制
+        let currentCoverPath = '';
+        document.getElementById('opt-cover').addEventListener('change', function() {
+            const panel = document.getElementById('cover-config-panel');
+            panel.style.display = this.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('cover-file').addEventListener('change', async function() {
+            const file = this.files[0];
+            if (!file) return;
+            
+            document.getElementById('cover-filename').textContent = file.name;
+            
+            // 本地预览
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('cover-preview').src = e.target.result;
+                document.getElementById('cover-preview-container').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+            
+            // 上传到服务器
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch('/api/upload/cover', { method: 'POST', body: formData });
+                const result = await res.json();
+                if (result.success) {
+                    currentCoverPath = result.data.path;
+                } else {
+                    showStatus('edit-status', '封面上传失败: ' + result.error, true);
+                    currentCoverPath = '';
+                }
+            } catch (e) {
+                showStatus('edit-status', '封面上传失败: ' + e.message, true);
+                currentCoverPath = '';
+            }
+        });
+
         // 字幕效果实时预览
         function updateSubtitlePreview() {
             const style = document.getElementById('subtitle-style').value;
@@ -1439,6 +1509,22 @@
             const cropHeadTime = isCropEnabled ? parseFloat(document.getElementById('crop-head-time').value) || 0 : 0;
             const cropTailTime = isCropEnabled ? parseFloat(document.getElementById('crop-tail-time').value) || 0 : 0;
 
+            // 获取封面配置
+            const addCover = document.getElementById('opt-cover').checked;
+            let coverConfig = {};
+            
+            if (addCover) {
+                if (!currentCoverPath) {
+                    showStatus('edit-status', '请先上传封面图片', true);
+                    return;
+                }
+                coverConfig = {
+                    add_cover: true,
+                    cover_path: currentCoverPath,
+                    cover_duration: parseFloat(document.getElementById('cover-duration').value) || 0.5
+                };
+            }
+
             // 获取字幕配置
             const addSubtitles = document.getElementById('opt-subtitles').checked;
             let subtitleConfig = {};
@@ -1517,6 +1603,7 @@
                 bgm_select: bgmSelect,
                 bgm_volume: parseFloat(document.getElementById('bgm-volume').value),
                 original_volume: useTTS ? 0 : parseFloat(document.getElementById('original-volume').value),  // TTS时原声为0
+                ...coverConfig,
                 ...subtitleConfig,
                 ...ttsConfig
             };

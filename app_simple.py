@@ -243,6 +243,34 @@ def upload_bgm():
     return jsonify({"success": False, "error": "仅支持 MP3/M4A/WAV"})
 
 
+@app.route("/api/upload/cover", methods=["POST"])
+def upload_cover():
+    """上传封面图片（每次剪辑单独使用，不保留在素材库）"""
+    if "file" not in request.files:
+        return jsonify({"success": False, "error": "没有文件"})
+    file = request.files["file"]
+    if file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        import hashlib
+        import time
+        ext = Path(file.filename).suffix.lower()
+        file_hash = hashlib.md5(file.filename.encode()).hexdigest()[:8]
+        timestamp = int(time.time())
+        filename = f"cover_{timestamp}_{file_hash}{ext}"
+        covers_dir = BASE_DIR / "uploads" / "covers"
+        covers_dir.mkdir(parents=True, exist_ok=True)
+        saved_path = covers_dir / secure_filename(filename)
+        file.save(saved_path)
+        return jsonify({
+            "success": True,
+            "message": "封面上传成功",
+            "data": {
+                "filename": filename,
+                "path": str(saved_path)
+            }
+        })
+    return jsonify({"success": False, "error": "仅支持 PNG/JPG"})
+
+
 # ========== TTS 脚本配音 API ==========
 
 @app.route("/api/tts/voices", methods=["GET"])

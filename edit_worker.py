@@ -175,6 +175,17 @@ def main():
             "traceback": traceback.format_exc(),
             "logs": log_content.split('\n')[-50:] if log_content else [error_msg]
         }
+    finally:
+        # 清理本次上传的临时封面文件
+        try:
+            cover_path = config.get("cover_path")
+            if cover_path:
+                cover_file = Path(cover_path)
+                if cover_file.exists() and "uploads/covers" in str(cover_file):
+                    cover_file.unlink()
+                    logger.info(f"🗑️  已清理临时封面: {cover_file.name}")
+        except Exception as e:
+            logger.warning(f"⚠️ 清理封面文件失败: {e}")
     
     # 保存结果
     result_file.write_text(
