@@ -3,7 +3,7 @@ version: '3.8'
 services:
   videoauto:
     build: .
-    container_name: openclaw-video-auto
+    container_name: dake-video-auto
     ports:
       - "5000:5000"
     volumes:

@@ -44,11 +44,11 @@ sudo systemctl start videoauto
 
 ```bash
 # 停止容器
-cd ~/Openclaw-Video-Auto
+cd ~/Dake-Video-Auto
 docker-compose down
 
 # 或者停止单个容器
-docker stop openclaw-video-auto
+docker stop dake-video-auto
 
 # 查看容器状态
 docker ps -a
@@ -117,9 +117,9 @@ if systemctl is-active --quiet videoauto 2>/dev/null; then
 fi
 
 # 方法4: 检查 Docker
-if docker ps | grep -q "openclaw-video-auto"; then
+if docker ps | grep -q "dake-video-auto"; then
     echo "🛑 停止 Docker 容器..."
-    docker stop openclaw-video-auto
+    docker stop dake-video-auto
     echo "✅ 容器已停止"
 fi
 
@@ -180,7 +180,7 @@ sudo lsof -i :5000
 
 ### Q: 停止后如何重新启动？
 ```bash
-cd ~/Openclaw-Video-Auto
+cd ~/Dake-Video-Auto
 source venv/bin/activate
 python app_simple.py
 

@@ -123,8 +123,10 @@ cd ~/apps
 git clone https://github.com/wudake/Dake-Video-Auto.git
 cd Dake-Video-Auto
 
-# 切换到最新版本
-git checkout v5.0.0
+# 切换到最新版本（可选，推荐保持 main 分支最新）
+git checkout main
+# 或切换到指定版本标签
+git checkout v6.2.0
 ```
 
 ### 3.3 创建虚拟环境
@@ -137,8 +139,8 @@ python3 -m venv venv
 source venv/bin/activate
 
 # 验证 Python 路径
-which python
-# 应该输出: /home/videoauto/apps/Dake-Video-Auto/venv/bin/python
+which python3
+# 应该输出: /home/videoauto/apps/Dake-Video-Auto/venv/bin/python3
 ```
 
 ### 3.4 安装依赖
@@ -178,7 +180,9 @@ playwright install-deps chromium
 source venv/bin/activate
 
 # 测试启动
-python app_simple.py
+python3 app_simple.py
+# 或直接使用虚拟环境解释器
+# ./venv/bin/python app_simple.py
 
 # 看到以下输出表示成功：
 # 🚀 启动服务: http://你的服务器IP:5000

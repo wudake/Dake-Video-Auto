@@ -97,7 +97,7 @@ sudo iptables-save
 ```bash
 sudo tee /etc/systemd/system/dake-video.service > /dev/null << 'EOF'
 [Unit]
-Description=Dake Video Auto Tool v4.6.0
+Description=Dake Video Auto Tool v6.2.0
 After=network.target
 
 [Service]
@@ -399,4 +399,4 @@ sudo systemctl restart nginx
 ## 📞 支持与反馈
 
 - GitHub Issues: https://github.com/wudake/Dake-Video-Auto/issues
-- 版本: v4.6.0
+- 版本: v6.2.0

@@ -82,7 +82,7 @@ version: '3.8'
 services:
   videoauto:
     build: .
-    container_name: openclaw-video-auto
+    container_name: dake-video-auto
     expose:
       - "5000"
     volumes:
@@ -158,23 +158,23 @@ docker-compose logs -f
 
 ```bash
 # 备份输出视频
-docker cp openclaw-video-auto:/app/output ./backup-output-$(date +%Y%m%d)
+docker cp dake-video-auto:/app/output ./backup-output-$(date +%Y%m%d)
 
 # 或者使用卷备份
-docker run --rm -v openclaw-video-auto_output:/source -v $(pwd):/backup alpine tar czf /backup/output-backup.tar.gz -C /source .
+docker run --rm -v dake-video-auto_output:/source -v $(pwd):/backup alpine tar czf /backup/output-backup.tar.gz -C /source .
 ```
 
 ### 进入容器
 
 ```bash
 # 进入容器内部
-docker exec -it openclaw-video-auto bash
+docker exec -it dake-video-auto bash
 
 # 查看容器内文件
-docker exec -it openclaw-video-auto ls -la /app/output
+docker exec -it dake-video-auto ls -la /app/output
 
 # 查看容器日志
-docker logs -f openclaw-video-auto
+docker logs -f dake-video-auto
 ```
 
 ---
@@ -221,20 +221,20 @@ docker-compose build --no-cache
 
 ```bash
 # 检查 Playwright 浏览器
-docker exec -it openclaw-video-auto playwright install chromium
+docker exec -it dake-video-auto playwright install chromium
 
 # 查看下载日志
-docker exec -it openclaw-video-auto tail -f /app/logs/*.log
+docker exec -it dake-video-auto tail -f /app/logs/*.log
 ```
 
 ### 问题3: TTS 无法生成
 
 ```bash
 # 检查网络连接（Edge-TTS 需要外网）
-docker exec -it openclaw-video-auto curl -I https://speech.platform.bing.com
+docker exec -it dake-video-auto curl -I https://speech.platform.bing.com
 
 # 检查 TTS 目录权限
-docker exec -it openclaw-video-auto ls -la /app/assets/tts
+docker exec -it dake-video-auto ls -la /app/assets/tts
 ```
 
 ### 问题4: 磁盘空间不足
@@ -247,7 +247,7 @@ docker system df
 docker system prune -a
 
 # 清理旧视频
-docker exec -it openclaw-video-auto find /app/output -name "*.mp4" -mtime +7 -delete
+docker exec -it dake-video-auto find /app/output -name "*.mp4" -mtime +7 -delete
 ```
 
 ---
