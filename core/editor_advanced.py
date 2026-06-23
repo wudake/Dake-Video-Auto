@@ -124,7 +124,7 @@ class AdvancedVideoEditor:
     # 特定 Logo 文件尺寸补偿系数：removebg 等工具导出的图片常带透明边距，
     # 导致实际可见 Logo 偏小，可按文件名配置放大倍数。
     LOGO_SIZE_OVERRIDES = {
-        "Logo-removebg-preview.png": 1.4,
+        "Logo-removebg-preview.png": 2.1,
     }
 
     def __init__(self, raw_dir="videos/raw", edited_dir="output",
