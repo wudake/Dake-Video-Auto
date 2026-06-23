@@ -44,3 +44,4 @@ ssl/
 
 # TTS 生成的音频文件
 assets/tts/
+uploads/covers/
