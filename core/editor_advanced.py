@@ -121,6 +121,12 @@ class AdvancedVideoEditor:
     # TTS 配音延迟时间（毫秒）
     TTS_DELAY_MS = 700
 
+    # 特定 Logo 文件尺寸补偿系数：removebg 等工具导出的图片常带透明边距，
+    # 导致实际可见 Logo 偏小，可按文件名配置放大倍数。
+    LOGO_SIZE_OVERRIDES = {
+        "Logo-removebg-preview.png": 1.4,
+    }
+
     def __init__(self, raw_dir="videos/raw", edited_dir="output",
                  assets_dir="assets", logos_dir="assets/logos", bgm_dir="assets/bgm"):
         self.raw_dir = Path(raw_dir)
@@ -714,6 +720,11 @@ class AdvancedVideoEditor:
             ls = config.get("logo_size", 0.12)
             op = config.get("logo_opacity", 0.85)
             pos = config.get("logo_position", "bottom_right")
+            
+            # 对特定 Logo 文件应用尺寸补偿
+            logo_multiplier = self.LOGO_SIZE_OVERRIDES.get(logo_name, 1.0)
+            ls = min(ls * logo_multiplier, 0.5)  # 最大不超过视频宽度的 50%
+            
             lw = int(target_width * ls)
             m = 30
             
